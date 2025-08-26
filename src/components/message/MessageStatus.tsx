@@ -20,6 +20,8 @@ type MessageStatuses = {
   [MessageStatusType.Read]?: number;
   [MessageStatusType.Failed]?: number;
   [MessageStatusType.Sending]?: number;
+  [MessageStatusType.None]?: number;
+  [MessageStatusType.Sent]?: number;
 };
 
 const statusStyle = {
@@ -48,14 +50,32 @@ const MessageStatus: React.FC<MessageStatusProps> = (props) => {
             style={{ ...statusStyle, ...statusIconStyle }}
             color="green"
           />
-          {/*{props.channelParticipants.length > 2 && (*/}
-          {/*  <span style={statusStyle}>*/}
-          {/*    {status[MessageStatusType.Delivered]}*/}
-          {/*  </span>*/}
-          {/*)}*/}
+          {props.channelParticipants.length > 2 && (
+            <span style={statusStyle}>
+              {status[MessageStatusType.Delivered]}
+            </span>
+          )}
+        </>
+      ) : null}
+      {status[MessageStatusType.Sent] ? (
+        <>
+          <DeliveredIcon
+            style={{ ...statusStyle, ...statusIconStyle }}
+            color="green"
+          />
+          {props.channelParticipants.length > 2 && (
+            <span style={statusStyle}>
+              {status[MessageStatusType.Delivered]}
+            </span>
+          )}
         </>
       ) : null}
       {status[MessageStatusType.Sending] ? (
+        <>
+          <SendingIcon style={{ ...statusStyle, ...statusIconStyle }} />
+        </>
+      ) : null}
+      {status[MessageStatusType.None] ? (
         <>
           <SendingIcon style={{ ...statusStyle, ...statusIconStyle }} />
         </>
@@ -67,9 +87,9 @@ const MessageStatus: React.FC<MessageStatusProps> = (props) => {
             style={{ ...statusStyle, ...statusIconStyle }}
             color="red"
           />
-          {/*{props.channelParticipants.length > 2 && (*/}
-          {/*  <span style={statusStyle}>{status[MessageStatusType.Failed]}</span>*/}
-          {/*)}*/}
+          {props.channelParticipants.length > 2 && (
+            <span style={statusStyle}>{status[MessageStatusType.Failed]}</span>
+          )}
         </>
       ) : null}
 
@@ -79,9 +99,9 @@ const MessageStatus: React.FC<MessageStatusProps> = (props) => {
             style={{ ...statusStyle, ...statusIconStyle }}
             color="green"
           />
-          {/*{props.channelParticipants.length > 2 && (*/}
-          {/*  <span style={statusStyle}>{status[MessageStatusType.Read]}</span>*/}
-          {/*)}*/}
+          {props.channelParticipants.length > 2 && (
+            <span style={statusStyle}>{status[MessageStatusType.Read]}</span>
+          )}
         </>
       ) : null}
     </>
