@@ -33,3 +33,5 @@ yarn-error.log*
 AutomationTests/environments/env_data
 
 dynamicConfig.yml
+package-lock.json
+yarn.lock
