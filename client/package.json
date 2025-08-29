@@ -44,7 +44,8 @@
     "yjs": "13.5.22"
   },
   "scripts": {
-    "build": "react-scripts build",
+    "prebuild": "rm -rf ../server/dist/assets",
+    "build": "BUILD_PATH=../server/dist/assets react-scripts build",
     "build:wdio": "cd AutomationTests; npm install",
     "eject": "react-scripts eject",
     "generateCircleConfig": "npx ts-node --project tsconfig.tools.json ./tools/circle-config-generator/generate-circle-config.ts",
