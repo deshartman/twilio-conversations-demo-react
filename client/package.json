@@ -1,6 +1,6 @@
 {
   "name": "conversation-demo-app",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "private": true,
   "dependencies": {
     "@twilio-paste/animation-library": "^2.0.0",
@@ -45,7 +45,7 @@
   },
   "scripts": {
     "prebuild": "rm -rf ../server/dist/assets",
-    "build": "BUILD_PATH=../server/dist/assets react-scripts build",
+    "build": "GENERATE_SOURCEMAP=false BUILD_PATH=../server/dist/assets react-scripts build",
     "build:wdio": "cd AutomationTests; npm install",
     "eject": "react-scripts eject",
     "generateCircleConfig": "npx ts-node --project tsconfig.tools.json ./tools/circle-config-generator/generate-circle-config.ts",

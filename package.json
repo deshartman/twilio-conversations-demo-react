@@ -1,0 +1,29 @@
+{
+  "name": "twilio-conversations-demo-monorepo",
+  "version": "2.0.0",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run start --workspace=client\" \"npm run start --workspace=server\"",
+    "build": "npm run build --workspace=client && npm run build --workspace=server",
+    "start": "npm run start --workspace=server",
+    "deploy": "npm run build && npm run deploy --workspace=server",
+    "test": "npm run test --workspace=client && npm run test --workspace=server",
+    "test:e2e": "npm run test:wdio --workspace=client",
+    "lint": "npm run lint --workspace=client",
+    "lint:fix": "npm run lint:fix --workspace=client"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^4.9.5",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "8.3.0",
+    "eslint-plugin-prettier": "4.0.0",
+    "prettier": "^2.8.8"
+  }
+}

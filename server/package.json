@@ -1,6 +1,6 @@
 {
   "name": "conversation-api-serverless",
-  "version": "0.0.1",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
     "test": "tsc --noEmit",
@@ -15,7 +15,8 @@
     "@twilio/runtime-handler": "2.0.3"
   },
   "devDependencies": {
-    "twilio-run": "^4.2.0"
+    "twilio-run": "^4.2.0",
+    "@types/node": "^20.0.0"
   },
   "engines": {
     "node": "20"
