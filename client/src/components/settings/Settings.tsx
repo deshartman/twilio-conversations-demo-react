@@ -36,6 +36,7 @@ import { ReduxParticipant } from "../../store/reducers/participantsReducer";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { AppState } from "../../store";
 import { getTranslation } from "../../utils/localUtils";
+import { formatPhoneNumber } from "../../utils/phoneUtils";
 
 interface SettingsProps {
   participants: ReduxParticipant[];
@@ -179,17 +180,19 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
           isModalOpen={isAddSMSOpen}
           title={manageParticipants}
           setName={(name: string) => {
-            setName(name);
+            const formattedName = formatPhoneNumber(name);
+            setName(formattedName);
             setError(
-              !isValidPhoneNumber(`+${name}`)
+              !isValidPhoneNumber(`+${formattedName}`)
                 ? invalidPhoneNumberErrorMessage
                 : ""
             );
           }}
           setProxyName={(name: string) => {
-            setNameProxy(name);
+            const formattedName = formatPhoneNumber(name);
+            setNameProxy(formattedName);
             setErrorProxy(
-              !isValidPhoneNumber(`+${name}`)
+              !isValidPhoneNumber(`+${formattedName}`)
                 ? invalidPhoneNumberErrorMessage
                 : ""
             );
@@ -230,17 +233,19 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
           isModalOpen={isAddWhatsAppOpen}
           title={manageParticipants}
           setName={(name: string) => {
-            setName(name);
+            const formattedName = formatPhoneNumber(name);
+            setName(formattedName);
             setError(
-              !isValidPhoneNumber(`+${name}`)
+              !isValidPhoneNumber(`+${formattedName}`)
                 ? invalidPhoneNumberErrorMessage
                 : ""
             );
           }}
           setProxyName={(name: string) => {
-            setNameProxy(name);
+            const formattedName = formatPhoneNumber(name);
+            setNameProxy(formattedName);
             setErrorProxy(
-              !isValidPhoneNumber(`+${name}`)
+              !isValidPhoneNumber(`+${formattedName}`)
                 ? invalidPhoneNumberErrorMessage
                 : ""
             );
