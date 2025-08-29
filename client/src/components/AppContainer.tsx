@@ -111,8 +111,8 @@ const AppContainer: React.FC = () => {
   };
   useEffect(() => {
     initFcmServiceWorker().catch(() => {
-      console.error(
-        "FCM initialization failed: no push notifications will be available"
+      console.warn(
+        "FCM initialization failed: no push notifications will be available (expected with placeholder Firebase config)"
       );
     });
   }, []);
@@ -125,8 +125,8 @@ const AppContainer: React.FC = () => {
     };
 
     fcmInit().catch(() => {
-      console.error(
-        "FCM initialization failed: no push notifications will be available"
+      console.warn(
+        "FCM initialization failed: no push notifications will be available (expected with placeholder Firebase config)"
       );
     });
 

@@ -103,37 +103,43 @@ const ReactionsBox: React.FC<ReactionsProps> = ({
         ...reactionButtonStyle,
       }}
     >
-      <MenuButton
-        {...menu}
-        variant="link"
-        size="reset"
-        style={{
-          padding: 4,
-        }}
-      >
-        {showAsLabel ? "Add reaction" : <AddReaction />}
-      </MenuButton>
-      <Menu
-        {...menu}
-        placement="top-start"
-        aria-label="MessageReactions"
-        style={{
-          padding: "8px 8px",
-          zIndex: 99,
-        }}
-      >
-        <div style={{ display: "flex" }}>
-          {Object.values(Reactions).map((reactionId) => (
-            <ReactionItem
-              key={reactionId}
-              emoji={reactionsMapping[reactionId]}
-              reactionId={reactionId}
-              onAction={onUpdateReaction}
-              user={user}
-            />
-          ))}
-        </div>
-      </Menu>
+      {showAsLabel ? (
+        <span style={{ padding: 4 }}>Add reaction</span>
+      ) : (
+        <>
+          <MenuButton
+            {...menu}
+            variant="link"
+            size="reset"
+            style={{
+              padding: 4,
+            }}
+          >
+            <AddReaction />
+          </MenuButton>
+          <Menu
+            {...menu}
+            placement="top-start"
+            aria-label="MessageReactions"
+            style={{
+              padding: "8px 8px",
+              zIndex: 99,
+            }}
+          >
+            <div style={{ display: "flex" }}>
+              {Object.values(Reactions).map((reactionId) => (
+                <ReactionItem
+                  key={reactionId}
+                  emoji={reactionsMapping[reactionId]}
+                  reactionId={reactionId}
+                  onAction={onUpdateReaction}
+                  user={user}
+                />
+              ))}
+            </div>
+          </Menu>
+        </>
+      )}
     </Box>
   );
 

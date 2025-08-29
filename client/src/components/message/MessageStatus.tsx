@@ -35,11 +35,19 @@ const MessageStatus: React.FC<MessageStatusProps> = (props) => {
   const [status, setStatus] = useState<MessageStatuses>({});
 
   useEffect(() => {
+    let cancelled = false;
+
     getMessageStatus(props.message, props.channelParticipants).then(
       (receipt) => {
-        setStatus(receipt);
+        if (!cancelled) {
+          setStatus(receipt);
+        }
       }
     );
+
+    return () => {
+      cancelled = true;
+    };
   }, [props.channelParticipants, props.message]);
 
   return (

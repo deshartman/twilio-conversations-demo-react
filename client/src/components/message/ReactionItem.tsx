@@ -9,11 +9,19 @@ const ReactionItem: React.FC<{
   user: string;
   onAction?: (reaction: Reactions) => void;
 }> = ({ reactions, emoji, reactionId, count, user, onAction }) => (
-  <button
-    type="button"
+  <div
     onClick={() => {
       if (onAction) {
         onAction(reactionId);
+      }
+    }}
+    role="button"
+    tabIndex={0}
+    onKeyDown={(e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        if (onAction) {
+          onAction(reactionId);
+        }
       }
     }}
     style={{
@@ -37,7 +45,7 @@ const ReactionItem: React.FC<{
       {" "}
       {count}
     </Text>
-  </button>
+  </div>
 );
 
 export default ReactionItem;
