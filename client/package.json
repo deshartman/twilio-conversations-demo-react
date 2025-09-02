@@ -1,6 +1,6 @@
 {
   "name": "conversation-demo-app",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "dependencies": {
     "@twilio-paste/animation-library": "^2.0.0",
@@ -44,7 +44,6 @@
     "yjs": "13.5.22"
   },
   "scripts": {
-    "prebuild": "rm -rf ../server/dist/assets",
     "build": "GENERATE_SOURCEMAP=false BUILD_PATH=../server/dist/assets react-scripts build",
     "build:wdio": "cd AutomationTests; npm install",
     "eject": "react-scripts eject",

@@ -158,13 +158,8 @@ export async function getToken(
   username: string,
   password: string
 ): Promise<string> {
-  const requestAddress = process.env
-    .REACT_APP_ACCESS_TOKEN_SERVICE_URL as string;
-  if (!requestAddress) {
-    throw new Error(
-      "REACT_APP_ACCESS_TOKEN_SERVICE_URL is not configured, cannot login"
-    );
-  }
+  // Relative path to serverless function - works when client is served from assets folder
+  const requestAddress = "/get-access-token";
 
   try {
     const response = await axios.get(requestAddress, {

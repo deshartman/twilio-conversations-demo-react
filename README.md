@@ -1,6 +1,6 @@
 # Twilio Conversations Demo - Full Stack Application
 
-![SDK Version](https://img.shields.io/badge/SDK%20version-2.0.0-blue.svg) ![Monorepo](https://img.shields.io/badge/Architecture-Monorepo-green.svg)
+![SDK Version](https://img.shields.io/badge/SDK%20version-2.1.0-blue.svg) ![Monorepo](https://img.shields.io/badge/Architecture-Monorepo-green.svg)
 
 ## Overview
 
@@ -90,7 +90,6 @@ Test the production build locally before deploying:
 
 ```bash
 # Build everything and run locally
-npm run build
 npm run start
 ```
 
@@ -153,14 +152,22 @@ graph TB
     E -->|serves| F[Complete Application]
 ```
 
-### Unified Commands
+### Centralized Build System (v2.1.0+)
 
-All commands run from the root directory:
+All build commands are centralized at the root level for simplified development:
 
-- `npm run dev` - Development with hot reload
-- `npm run build` - Production build  
-- `npm run start` - Local production server
-- `npm run deploy` - Deploy to Twilio Functions
+**Main Commands:**
+- `npm run build` - **Full build**: cleans, builds client to server assets, compiles server TypeScript
+- `npm run start` - **Build + start**: complete build then starts local server on port 3003
+- `npm run deploy` - **Build + deploy**: complete build then deploys to Twilio Functions
+- `npm run dev` - **Development**: same as `npm run start` (build + local server)
+
+**Individual Build Steps:**
+- `npm run clean` - Removes server/dist directory
+- `npm run build:client` - Builds React app to `../server/dist/assets`  
+- `npm run build:server` - Compiles TypeScript server functions
+
+**Other Commands:**
 - `npm run test` - Run all tests
 - `npm run lint` - Lint client code
 
@@ -214,9 +221,19 @@ To enable push notifications, set up Firebase:
 - Client assets served from root path
 - API endpoints at `/get-access-token`, `/post-event`, etc.
 
-## Migration from v1.x
+## Migration Notes
 
-This v2.0.0 release represents a major architectural change from standalone React app to integrated full-stack monorepo. See [CHANGELOG.md](CHANGELOG.md) for complete migration details.
+### From v2.0.x to v2.1.0
+
+Version 2.1.0 introduces improved build system and TypeScript compatibility:
+- **Centralized build commands** - All build orchestration moved to root package.json
+- **Fixed TypeScript issues** - Resolved serverless runtime types and import compatibility  
+- **Simplified workflow** - Single `npm run start` command builds and runs everything
+- **Better dependency management** - Proper serverless runtime types dependency added
+
+### From v1.x to v2.x
+
+Version 2.0.0 represents a major architectural change from standalone React app to integrated full-stack monorepo. See [CHANGELOG.md](CHANGELOG.md) for complete migration details.
 
 Key changes:
 - All client code moved to `client/` directory  

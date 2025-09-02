@@ -1,22 +1,20 @@
 {
   "name": "conversation-api-serverless",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "private": true,
   "scripts": {
     "test": "tsc --noEmit",
-    "start": "twilio-run --functions-folder dist/functions --assets-folder dist/assets --port 3003",
-    "deploy": "twilio-run deploy --functions-folder dist/functions --assets-folder dist/assets",
     "build": "tsc",
-    "prestart": "npm run build",
-    "predeploy": "npm run build"
+    "start": "npx twilio-run --functions-folder dist/functions --assets-folder dist/assets --port 3003"
   },
   "dependencies": {
-    "twilio": "5.8.2",
-    "@twilio/runtime-handler": "2.0.1"
+    "@twilio-labs/serverless-runtime-types": "^4.0.1",
+    "@twilio/runtime-handler": "2.1.0",
+    "twilio": "5.8.2"
   },
   "devDependencies": {
-    "twilio-run": "^4.2.0",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "twilio-run": "^4.2.0"
   },
   "engines": {
     "node": "20"
