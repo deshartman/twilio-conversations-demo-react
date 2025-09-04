@@ -45,7 +45,7 @@ export const handler: ServerlessFunctionSignature = function (
         }
     );
 
-    const grant = new ChatGrant({ serviceSid: (context as any).SERVICE_SID });
+    const grant = new ChatGrant({ serviceSid: (context as any).CONVERSATION_SERVICE_SID });
     if ((context as any).PUSH_CREDENTIAL_SID) {
         // Optional: without it, no push notifications will be sent
         grant.pushCredentialSid = (context as any).PUSH_CREDENTIAL_SID;

@@ -18,7 +18,7 @@ Create a `.env` file in the server directory with your Twilio credentials:
 ACCOUNT_SID=your_twilio_account_sid
 TWILIO_API_KEY_SID=your_api_key_sid
 TWILIO_API_KEY_SECRET=your_api_key_secret
-SERVICE_SID=your_conversations_service_sid
+CONVERSATION_SERVICE_SID=your_conversations_service_sid
 PUSH_CREDENTIAL_SID=your_push_credential_sid  # Optional
 ```
 
@@ -93,7 +93,7 @@ Pre-processes conversation events before they're delivered.
 - `ACCOUNT_SID` - Your Twilio Account SID
 - `TWILIO_API_KEY_SID` - API Key for authentication
 - `TWILIO_API_KEY_SECRET` - API Key secret
-- `SERVICE_SID` - Twilio Conversations Service SID
+- `CONVERSATION_SERVICE_SID` - Twilio Conversations Service SID
 
 ### Optional Variables
 - `PUSH_CREDENTIAL_SID` - For push notifications
