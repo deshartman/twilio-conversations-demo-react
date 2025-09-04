@@ -6,7 +6,29 @@ The latest available SDK version of this demo app: ![](https://img.shields.io/ba
 
 ## Getting Started
 
-Welcome to the Conversations Demo Web application. This application demonstrates a basic Conversations client application with the ability to create and join conversations, add other participants into the conversations and exchange messages.
+Welcome to the Conversations Demo Web application. This application demonstrates a basic Conversations client application with the ability to create and join conversations, add participants (including AI agents), and exchange messages.
+
+## Features
+
+### Participant Types
+This demo supports multiple types of participants:
+- **Chat participants** - Regular users who can send and receive messages
+- **SMS participants** - Users participating via SMS messaging  
+- **WhatsApp participants** - Users participating via WhatsApp messaging
+- **AI Agent participants** - AI agents that can be added to conversations for automated responses
+
+### AI Agent Integration
+The application includes dedicated support for AI agents:
+- AI agents are automatically prefixed with "ASKAI-" for easy identification
+- Users are automatically created in the Conversations service when adding new AI agents
+- AI agents appear in participant lists alongside regular users
+- Designed to work with incoming messages from AI systems
+
+### Technical Implementation
+- **Client-side**: React application with Twilio Paste UI components
+- **Server-side**: Twilio Serverless Functions handle user creation and participant management
+- **Real-time**: WebSocket-based messaging with automatic participant updates
+- **Multi-language**: Supports English, Spanish, and French
 
 You can try out one of our 1-click deploys to test the app out prior to jumping to [Next Steps](#next-steps):
 

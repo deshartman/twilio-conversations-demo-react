@@ -8,13 +8,14 @@ import SettingsMenu from "./SettingsMenu";
 import ManageParticipantsModal from "../modals/manageParticipantsModal";
 import { Content } from "../../types";
 import {
-  addChatParticipant,
   addNonChatParticipant,
+  addUserAsParticipant,
   removeParticipant,
 } from "../../api";
 import AddChatParticipantModal from "../modals/addChatMemberModal";
 import AddSMSParticipantModal from "../modals/addSMSParticipantModal";
 import AddWhatsAppParticipantModal from "../modals/addWhatsAppParticipant";
+import AddAIAgentModal from "../modals/addAIAgentModal";
 import { actionCreators } from "../../store";
 import ActionErrorModal from "../modals/ActionErrorModal";
 import {
@@ -63,6 +64,10 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
   const [isAddWhatsAppOpen, setIsAddWhatsAppOpen] = useState(false);
   const handleWhatsAppOpen = () => setIsAddWhatsAppOpen(true);
   const handleWhatsAppClose = () => setIsAddWhatsAppOpen(false);
+
+  const [isAddAIAgentOpen, setIsAddAIAgentOpen] = useState(false);
+  const handleAIAgentOpen = () => setIsAddAIAgentOpen(true);
+  const handleAIAgentClose = () => setIsAddAIAgentOpen(false);
 
   const local = useSelector((state: AppState) => state.local);
   const manageParticipants = getTranslation(local, "manageParticipants");
@@ -159,6 +164,9 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
                 return null;
               case Content.AddChat:
                 handleChatOpen();
+                return null;
+              case Content.AddAIAgent:
+                handleAIAgentOpen();
                 return null;
               default:
                 return null;
@@ -301,9 +309,51 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
           }}
           action={async () => {
             try {
-              await addChatParticipant(name.trim(), sdkConvo, addNotifications);
+              await addUserAsParticipant(
+                name.trim(),
+                name.trim(),
+                props.convo.sid,
+                addNotifications
+              );
               emptyData();
               handleChatClose();
+            } catch (e) {
+              setErrorData(e.body);
+              setErrorToShow(ERROR_MODAL_MESSAGES.ADD_PARTICIPANT);
+            }
+          }}
+        />
+      )}
+      {isAddAIAgentOpen && (
+        <AddAIAgentModal
+          name={name}
+          isModalOpen={isAddAIAgentOpen}
+          title={manageParticipants}
+          setName={(name: string) => {
+            setName(name);
+            setErrors("");
+          }}
+          error={error}
+          nameInputRef={nameInputRef}
+          handleClose={() => {
+            emptyData();
+            handleAIAgentClose();
+          }}
+          onBack={() => {
+            emptyData();
+            handleAIAgentClose();
+            props.setIsManageParticipantOpen(true);
+          }}
+          action={async () => {
+            try {
+              await addUserAsParticipant(
+                "ASKAI-" + name.trim(),
+                name.trim(),
+                props.convo.sid,
+                addNotifications
+              );
+              emptyData();
+              handleAIAgentClose();
             } catch (e) {
               setErrorData(e.body);
               setErrorToShow(ERROR_MODAL_MESSAGES.ADD_PARTICIPANT);

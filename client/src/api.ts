@@ -291,3 +291,63 @@ export const getMessages = async (
   conversation: Conversation
 ): Promise<Paginator<Message>> =>
   await conversation.getMessages(CONVERSATION_PAGE_SIZE);
+
+export async function addUserAsParticipant(
+  userIdentity: string,
+  friendlyName: string,
+  conversationSid: string,
+  addNotifications?: (notifications: NotificationsType) => void
+): Promise<{
+  success: boolean;
+  participant: {
+    sid: string;
+    identity: string;
+    attributes: unknown;
+    dateCreated: Date;
+    dateUpdated: Date;
+  };
+  user: {
+    sid: string;
+    identity: string;
+    friendlyName: string;
+  };
+}> {
+  if (userIdentity.length === 0) {
+    throw new Error("User identity is empty");
+  }
+
+  if (friendlyName.length === 0) {
+    throw new Error("Friendly name is empty");
+  }
+
+  if (conversationSid.length === 0) {
+    throw new Error("Conversation SID is empty");
+  }
+
+  try {
+    const response = await axios.post("/add-users", {
+      userIdentity: userIdentity.trim(),
+      friendlyName: friendlyName.trim(),
+      conversationSid: conversationSid,
+    });
+
+    if (response.data.success) {
+      successNotification({
+        message: PARTICIPANT_MESSAGES.ADDED,
+        addNotifications,
+      });
+      return response.data;
+    } else {
+      throw new Error(response.data.error || "Failed to add user");
+    }
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const errorMessage = error.response?.data?.error || error.message;
+      unexpectedErrorNotification(errorMessage, addNotifications);
+      throw new Error(errorMessage);
+    } else {
+      unexpectedErrorNotification(error.message, addNotifications);
+      throw error;
+    }
+  }
+}

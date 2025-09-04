@@ -70,6 +70,48 @@ Handles conversation events and webhooks from Twilio.
 
 Pre-processes conversation events before they're delivered.
 
+### POST /add-participant
+
+Adds participants to existing conversations.
+
+**Parameters:**
+- `conversationSid` - Conversation SID (CHxxxx format)
+- `participantData` - Participant configuration object
+
+**Participant Types:**
+
+*SMS Participant:*
+```json
+{
+  "conversationSid": "CHxxxx",
+  "participantData": {
+    "messagingBinding.address": "+15551234567",
+    "messagingBinding.proxyAddress": "+14155551234"
+  }
+}
+```
+
+*WhatsApp Participant:*
+```json
+{
+  "conversationSid": "CHxxxx", 
+  "participantData": {
+    "messagingBinding.address": "whatsapp:+15551234567",
+    "messagingBinding.proxyAddress": "whatsapp:+14155551234"
+  }
+}
+```
+
+*Chat Participant:*
+```json
+{
+  "conversationSid": "CHxxxx",
+  "participantData": {
+    "identity": "user123"
+  }
+}
+```
+
 ## Architecture
 
 ### Serverless Runtime
@@ -142,7 +184,8 @@ server/
 ├── src/
 │   ├── get-access-token.ts    # Authentication endpoint
 │   ├── post-event.ts          # Event webhook handler  
-│   └── pre-event.ts           # Pre-event processor
+│   ├── pre-event.ts           # Pre-event processor
+│   └── add-participant.ts     # Add participants to conversations
 ├── dist/                      # Compiled output
 │   ├── functions/             # Serverless functions
 │   └── assets/                # React client assets
@@ -154,5 +197,6 @@ Functions are available at:
 - `http://localhost:3003/get-access-token`
 - `http://localhost:3003/post-event`
 - `http://localhost:3003/pre-event`
+- `http://localhost:3003/add-participant`
 
 React app served at: `http://localhost:3003/`
