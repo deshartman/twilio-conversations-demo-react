@@ -72,6 +72,7 @@ export const handler: PreEventFunction = async (
 
     switch (event.EventType) {
       case 'onMessageAdd':
+        console.log('=== PROCESSING MESSAGE ADD EVENT ===');
         console.log('Processing message add event - Full event data:', {
           EventType: event.EventType,
           ChatServiceSid: event.ChatServiceSid,
@@ -87,12 +88,46 @@ export const handler: PreEventFunction = async (
           Index: event.Index,
           Media: event.Media
         });
-        
+
+        console.log('Message Body:', JSON.stringify(event.Body));
+        console.log('Message Author:', JSON.stringify(event.Author));
+
         if (event.Body && event.Author) {
+          // Check if message contains "AskAI" (case insensitive)
+          if (event.Body.toLocaleUpperCase().includes('ASKAI')) {
+            console.log('=== ASKAI DETECTED - CALLING RESPONSE ENDPOINT ===');
+            try {
+              // Call response function using Runtime.getFunctions()
+              const responsePath = Runtime.getFunctions()['response'].path;
+              const responseModule = require(responsePath);
+              
+              const responseEvent = {
+                Body: event.Body,
+                Author: event.Author,
+                ConversationSid: event.ConversationSid,
+                request: { cookies: {}, headers: {} }
+              };
+
+              await new Promise<void>((resolve, reject) => {
+                responseModule.responseHandler(context, responseEvent, (err: any, result: any) => {
+                  if (err) {
+                    console.error('Error calling response function:', err);
+                    reject(err);
+                  } else {
+                    console.log('Response function result:', result);
+                    resolve();
+                  }
+                });
+              });
+            } catch (error) {
+              console.error('Failed to call response function:', error);
+            }
+          }
+
           // Add Author prefix to the message body
           response.body = `${event.Author}: ${event.Body}`;
           console.log('Message body modified with author prefix:', `${event.Author}: ${event.Body}`);
-          
+
           // Add custom attributes to track modification
           const existingAttributes = event.Attributes ? JSON.parse(event.Attributes) : {};
           response.attributes = JSON.stringify({
@@ -100,7 +135,8 @@ export const handler: PreEventFunction = async (
             processedAt: new Date().toISOString(),
             preProcessed: true,
             originalBody: event.Body,
-            originalAuthor: event.Author
+            originalAuthor: event.Author,
+            askAiCalled: event.Body.includes('AskAI')
           });
         } else {
           console.log('Missing body or author for modification');
@@ -151,7 +187,7 @@ export const handler: PreEventFunction = async (
 
   } catch (error: unknown) {
     console.error('Error in pre-event webhook:', error);
-    
+
     // Return error to reject the action
     if (error instanceof Error) {
       return callback(error);
