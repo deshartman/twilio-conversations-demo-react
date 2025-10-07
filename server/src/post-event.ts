@@ -97,6 +97,82 @@ export const handler: PostEventFunction = async (
             hasMedia,
             mediaCount: event.Media?.length || 0
           });
+
+          // Check if message contains "AskAI" (case insensitive)
+          if (event.Body.toLocaleUpperCase().includes('ASKAI') && event.Author && event.ConversationSid) {
+            console.log('=== ASKAI DETECTED IN POST-EVENT - CALLING EXTERNAL API ===');
+            try {
+              // Get or create session ID from conversation attributes
+              const client = context.getTwilioClient();
+              const serviceSid = event.ChatServiceSid;
+
+              const conversation = await client.conversations.v1
+                .services(serviceSid)
+                .conversations(event.ConversationSid)
+                .fetch();
+
+              const attributes = conversation.attributes ? JSON.parse(conversation.attributes) : {};
+              let sessionId = attributes.aiSessionId;
+
+              // Call external AI API
+              const apiUrl = (context as any).RESPONSE_SERVER_URL;
+              if (!apiUrl) {
+                throw new Error('RESPONSE_SERVER_URL environment variable not set');
+              }
+
+              const requestBody: any = {
+                message: event.Body
+              };
+
+              if (sessionId) {
+                requestBody.sessionId = sessionId;
+              }
+
+              console.log('Calling external API:', apiUrl, requestBody);
+
+              const apiResponse = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+              });
+
+              if (!apiResponse.ok) {
+                throw new Error(`API call failed with status: ${apiResponse.status}`);
+              }
+
+              const apiData = await apiResponse.json();
+              console.log('API response:', apiData);
+
+              // Store session ID if this is a new session
+              if (apiData.sessionId && !sessionId) {
+                attributes.aiSessionId = apiData.sessionId;
+                await client.conversations.v1
+                  .services(serviceSid)
+                  .conversations(event.ConversationSid)
+                  .update({
+                    attributes: JSON.stringify(attributes)
+                  });
+                console.log('Stored new session ID:', apiData.sessionId);
+              }
+
+              // Send AI response to conversation
+              if (apiData.response) {
+                await client.conversations.v1
+                  .services(serviceSid)
+                  .conversations(event.ConversationSid)
+                  .messages
+                  .create({
+                    author: 'AI-Assistant',
+                    body: apiData.response
+                  });
+                console.log('AI response sent to conversation');
+              }
+            } catch (error) {
+              console.error('Failed to call external API:', error);
+            }
+          }
         }
         break;
 

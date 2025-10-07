@@ -93,37 +93,6 @@ export const handler: PreEventFunction = async (
         console.log('Message Author:', JSON.stringify(event.Author));
 
         if (event.Body && event.Author) {
-          // Check if message contains "AskAI" (case insensitive)
-          if (event.Body.toLocaleUpperCase().includes('ASKAI')) {
-            console.log('=== ASKAI DETECTED - CALLING RESPONSE ENDPOINT ===');
-            try {
-              // Call response function using Runtime.getFunctions()
-              const responsePath = Runtime.getFunctions()['response'].path;
-              const responseModule = require(responsePath);
-              
-              const responseEvent = {
-                Body: event.Body,
-                Author: event.Author,
-                ConversationSid: event.ConversationSid,
-                request: { cookies: {}, headers: {} }
-              };
-
-              await new Promise<void>((resolve, reject) => {
-                responseModule.responseHandler(context, responseEvent, (err: any, result: any) => {
-                  if (err) {
-                    console.error('Error calling response function:', err);
-                    reject(err);
-                  } else {
-                    console.log('Response function result:', result);
-                    resolve();
-                  }
-                });
-              });
-            } catch (error) {
-              console.error('Failed to call response function:', error);
-            }
-          }
-
           // Add Author prefix to the message body
           response.body = `${event.Author}: ${event.Body}`;
           console.log('Message body modified with author prefix:', `${event.Author}: ${event.Body}`);
