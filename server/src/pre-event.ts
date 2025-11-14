@@ -1,5 +1,10 @@
 import { Context, ServerlessCallback, ServerlessFunctionSignature } from '@twilio-labs/serverless-runtime-types/types';
 
+export interface ServerlessEnvironment {
+  CONVERSATION_SERVICE_SID?: string;
+  [key: string]: string | undefined;
+}
+
 export interface ConversationWebhookEvent {
   EventType: string;
   ChatServiceSid: string;
@@ -43,10 +48,10 @@ export interface PreEventResponse {
   [key: string]: any;
 }
 
-type PreEventFunction = ServerlessFunctionSignature<{}, ConversationWebhookEvent>;
+type PreEventFunction = ServerlessFunctionSignature<ServerlessEnvironment, ConversationWebhookEvent>;
 
 export const handler: PreEventFunction = async (
-  context: Context<{}>,
+  context: Context<ServerlessEnvironment>,
   event: ConversationWebhookEvent,
   callback: ServerlessCallback
 ) => {
@@ -92,23 +97,71 @@ export const handler: PreEventFunction = async (
         console.log('Message Body:', JSON.stringify(event.Body));
         console.log('Message Author:', JSON.stringify(event.Author));
 
-        if (event.Body && event.Author) {
-          // Add Author prefix to the message body
-          response.body = `${event.Author}: ${event.Body}`;
-          console.log('Message body modified with author prefix:', `${event.Author}: ${event.Body}`);
+        if (event.Body && event.Author && event.ParticipantSid && event.ConversationSid) {
+          try {
+            // Fetch participant details to get friendly name
+            const client = context.getTwilioClient();
+            const serviceSid = event.ChatServiceSid;
 
-          // Add custom attributes to track modification
-          const existingAttributes = event.Attributes ? JSON.parse(event.Attributes) : {};
-          response.attributes = JSON.stringify({
-            ...existingAttributes,
-            processedAt: new Date().toISOString(),
-            preProcessed: true,
-            originalBody: event.Body,
-            originalAuthor: event.Author,
-            askAiCalled: event.Body.includes('AskAI')
-          });
+            const participant = await client.conversations.v1
+              .services(serviceSid)
+              .conversations(event.ConversationSid)
+              .participants(event.ParticipantSid)
+              .fetch();
+
+            // Extract friendly name from participant
+            let friendlyName = 'Unknown';
+
+            // Check native friendlyName (for SMS/WhatsApp)
+            if (participant.messagingBinding?.friendlyName) {
+              friendlyName = participant.messagingBinding.friendlyName;
+            }
+            // Check attributes.friendlyName (for chat users)
+            else if (participant.attributes) {
+              try {
+                const attributes = JSON.parse(participant.attributes);
+                if (attributes.friendlyName) {
+                  friendlyName = attributes.friendlyName;
+                }
+              } catch (e) {
+                console.log('Failed to parse participant attributes:', e);
+              }
+            }
+
+            console.log('Extracted friendly name:', friendlyName);
+
+            // Format message with friendly name on first line, body on subsequent lines
+            response.body = `[${friendlyName}]\n${event.Body}`;
+            console.log('Message body modified with friendly name:', response.body);
+
+            // Add custom attributes to track modification
+            const existingAttributes = event.Attributes ? JSON.parse(event.Attributes) : {};
+            response.attributes = JSON.stringify({
+              ...existingAttributes,
+              processedAt: new Date().toISOString(),
+              preProcessed: true,
+              originalBody: event.Body,
+              originalAuthor: event.Author,
+              friendlyName: friendlyName,
+              askAiCalled: event.Body.includes('AskAI')
+            });
+          } catch (error) {
+            console.error('Error fetching participant details:', error);
+            // Fallback to original author if participant fetch fails
+            response.body = `[${event.Author}]\n${event.Body}`;
+
+            const existingAttributes = event.Attributes ? JSON.parse(event.Attributes) : {};
+            response.attributes = JSON.stringify({
+              ...existingAttributes,
+              processedAt: new Date().toISOString(),
+              preProcessed: true,
+              originalBody: event.Body,
+              originalAuthor: event.Author,
+              askAiCalled: event.Body.includes('AskAI')
+            });
+          }
         } else {
-          console.log('Missing body or author for modification');
+          console.log('Missing required fields for modification');
         }
         break;
 
