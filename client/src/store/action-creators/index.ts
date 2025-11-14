@@ -238,3 +238,12 @@ export const updateLocal = (local: string) => {
     });
   };
 };
+
+export const setProxyNumber = (proxyNumber: string) => {
+  return (dispatch: Dispatch<Action>): void => {
+    dispatch({
+      type: ActionType.SET_PROXY_NUMBER,
+      payload: proxyNumber,
+    });
+  };
+};

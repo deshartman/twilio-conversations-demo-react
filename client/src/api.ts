@@ -91,6 +91,19 @@ export async function addChatParticipant(
   }
 }
 
+// TEMP LOGGING - Remove after testing
+const tempLogSDKCall = (
+  proxyNumber: string,
+  number: string,
+  friendlyName: string
+) => {
+  console.log("=== SDK addNonChatParticipant CALL ===");
+  console.log("proxyNumber (arg1):", proxyNumber);
+  console.log("number (arg2):", number);
+  console.log("friendlyName (options):", friendlyName);
+  console.log("=====================================");
+};
+
 export async function addNonChatParticipant(
   number: string,
   proxyNumber: string,
@@ -111,6 +124,7 @@ export async function addNonChatParticipant(
   }
 
   try {
+    tempLogSDKCall(proxyNumber, number, friendlyName || number); // TEMP LOGGING
     const result = await convo.addNonChatParticipant(proxyNumber, number, {
       friendlyName: friendlyName || number,
     });
@@ -174,6 +188,18 @@ export async function getToken(
 
     console.error(`ERROR received from ${requestAddress}: ${error}\n`);
     throw new Error(`ERROR received from ${requestAddress}: ${error}\n`);
+  }
+}
+
+export async function getProxyNumber(): Promise<string> {
+  const requestAddress = "/get-config";
+
+  try {
+    const response = await axios.get(requestAddress);
+    return response.data.proxyNumber;
+  } catch (error) {
+    console.error(`ERROR received from ${requestAddress}: ${error}\n`);
+    throw new Error(`Failed to fetch proxy number: ${error}\n`);
   }
 }
 

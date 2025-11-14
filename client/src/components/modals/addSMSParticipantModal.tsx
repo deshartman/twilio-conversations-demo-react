@@ -13,12 +13,9 @@ interface AddSMSParticipantModalProps {
   isModalOpen: boolean;
   title: string;
   friendlyName: string;
-  proxyName: string;
   setName: (name: string) => void;
   setFriendlyName: (name: string) => void;
-  setProxyName: (name: string) => void;
   error: string;
-  errorProxy: string;
   nameInputRef: RefObject<HTMLInputElement>;
   handleClose: () => void;
   onBack: () => void;
@@ -29,8 +26,6 @@ const AddSMSParticipantModal: React.FC<AddSMSParticipantModalProps> = (
   props: AddSMSParticipantModalProps
 ) => {
   const local = useSelector((state: AppState) => state.local);
-  const proxyNum = getTranslation(local, "proxyNum");
-  const proxyNumHelpTxt = getTranslation(local, "proxyNumHelpTxt");
   const smsNum = getTranslation(local, "smsNum");
   const smsHelpTxt = getTranslation(local, "smsHelpTxt");
   const addSMSParticipant = getTranslation(local, "addSMSParticipant");
@@ -74,22 +69,12 @@ const AddSMSParticipantModal: React.FC<AddSMSParticipantModalProps> = (
                 error=""
                 help_text="Display name for this participant"
               />
-              <ModalInputField
-                label={proxyNum}
-                input={props.proxyName}
-                placeholder="123456789012"
-                onChange={props.setProxyName}
-                error={props.errorProxy}
-                // error_text="Enter a valid Twilio phone number."
-                help_text={proxyNumHelpTxt}
-                prefixType="SMS"
-              />
             </Box>
           </ModalBody>
         }
         modalFooter={
           <AddParticipantFooter
-            isSaveDisabled={!props.name || !props.proxyName || !!props.error}
+            isSaveDisabled={!props.name || !!props.error}
             actionName={ActionName.Save}
             onBack={() => {
               props.onBack();

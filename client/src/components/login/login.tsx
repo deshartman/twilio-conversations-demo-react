@@ -11,7 +11,7 @@ import TwilioLogo from "../icons/TwilioLogo";
 import useAppAlert from "../../hooks/useAppAlerts";
 import React from "react";
 
-type SetTokenType = (token: string) => void;
+type SetTokenType = (token: string) => Promise<void>;
 
 interface LoginProps {
   setToken: SetTokenType;
@@ -20,7 +20,7 @@ interface LoginProps {
 async function login(
   username: string,
   password: string,
-  setToken: (token: string) => void
+  setToken: (token: string) => Promise<void>
 ): Promise<string> {
   try {
     const token = await getToken(username.trim(), password);
@@ -30,7 +30,7 @@ async function login(
 
     localStorage.setItem("username", username);
     localStorage.setItem("password", password);
-    setToken(token);
+    await setToken(token);
 
     return "";
   } catch (error) {

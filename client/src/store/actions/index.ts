@@ -132,6 +132,11 @@ interface UpdateLocal {
   payload: string;
 }
 
+interface SetProxyNumber {
+  type: ActionType.SET_PROXY_NUMBER;
+  payload: string;
+}
+
 export type Action =
   | LoginAction
   | LogOutAction
@@ -155,4 +160,5 @@ export type Action =
   | RemoveNotifications
   | FilterConversations
   | UpdateTimeFormat
-  | UpdateLocal;
+  | UpdateLocal
+  | SetProxyNumber;

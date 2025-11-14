@@ -39,6 +39,18 @@ import { AppState } from "../../store";
 import { getTranslation } from "../../utils/localUtils";
 import { formatPhoneNumber } from "../../utils/phoneUtils";
 
+// TEMP LOGGING - Remove after testing
+const tempLogProxyUsage = (
+  type: string,
+  participantNumber: string,
+  proxyNumber: string
+) => {
+  console.log(`=== ADDING ${type} PARTICIPANT ===`);
+  console.log("Participant Number:", participantNumber);
+  console.log("Proxy Number from Redux:", proxyNumber);
+  console.log("================================");
+};
+
 interface SettingsProps {
   participants: ReduxParticipant[];
   client?: Client;
@@ -70,14 +82,12 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
   const handleAIAgentClose = () => setIsAddAIAgentOpen(false);
 
   const local = useSelector((state: AppState) => state.local);
+  const proxyNumber = useSelector((state: AppState) => state.proxyNumber);
   const manageParticipants = getTranslation(local, "manageParticipants");
 
   const [name, setName] = useState("");
   const [friendlyName, setFriendlyName] = useState("");
   const [error, setError] = useState("");
-
-  const [nameProxy, setNameProxy] = useState("");
-  const [errorProxy, setErrorProxy] = useState("");
 
   const [showError, setErrorToShow] = useState<
     | {
@@ -110,14 +120,11 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
   function emptyData() {
     setName("");
     setFriendlyName("");
-    setNameProxy("");
     setError("");
-    setErrorProxy("");
   }
 
   function setErrors(errorText: string) {
     setError(errorText);
-    setErrorProxy(errorText);
   }
 
   return (
@@ -187,7 +194,6 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
         <AddSMSParticipantModal
           name={name}
           friendlyName={friendlyName}
-          proxyName={nameProxy}
           isModalOpen={isAddSMSOpen}
           title={manageParticipants}
           setName={(name: string) => {
@@ -200,17 +206,7 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
             );
           }}
           setFriendlyName={setFriendlyName}
-          setProxyName={(name: string) => {
-            const formattedName = formatPhoneNumber(name);
-            setNameProxy(formattedName);
-            setErrorProxy(
-              !isValidPhoneNumber(`+${formattedName}`)
-                ? invalidPhoneNumberErrorMessage
-                : ""
-            );
-          }}
           error={error}
-          errorProxy={errorProxy}
           nameInputRef={nameInputRef}
           handleClose={() => {
             emptyData();
@@ -223,9 +219,10 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
           }}
           action={async () => {
             try {
+              tempLogProxyUsage("SMS", SMS_PREFIX + name, proxyNumber); // TEMP LOGGING
               await addNonChatParticipant(
                 SMS_PREFIX + name,
-                SMS_PREFIX + nameProxy,
+                proxyNumber,
                 sdkConvo,
                 addNotifications,
                 friendlyName
@@ -243,7 +240,6 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
         <AddWhatsAppParticipantModal
           name={name}
           friendlyName={friendlyName}
-          proxyName={nameProxy}
           isModalOpen={isAddWhatsAppOpen}
           title={manageParticipants}
           setName={(name: string) => {
@@ -256,17 +252,7 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
             );
           }}
           setFriendlyName={setFriendlyName}
-          setProxyName={(name: string) => {
-            const formattedName = formatPhoneNumber(name);
-            setNameProxy(formattedName);
-            setErrorProxy(
-              !isValidPhoneNumber(`+${formattedName}`)
-                ? invalidPhoneNumberErrorMessage
-                : ""
-            );
-          }}
           error={error}
-          errorProxy={errorProxy}
           nameInputRef={nameInputRef}
           handleClose={() => {
             emptyData();
@@ -279,9 +265,14 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
           }}
           action={async () => {
             try {
+              tempLogProxyUsage(
+                "WhatsApp",
+                WHATSAPP_PREFIX + name,
+                proxyNumber
+              ); // TEMP LOGGING
               await addNonChatParticipant(
                 WHATSAPP_PREFIX + name,
-                WHATSAPP_PREFIX + nameProxy,
+                proxyNumber,
                 sdkConvo,
                 addNotifications,
                 friendlyName

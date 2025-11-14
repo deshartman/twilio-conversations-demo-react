@@ -19,6 +19,7 @@ import notificationsReducer, {
 } from "./notificationsReducer";
 import timeReducer from "./timeReducer";
 import localReducer from "./localReducer";
+import configReducer from "./configReducer";
 
 export type AppState = {
   token: string;
@@ -35,6 +36,7 @@ export type AppState = {
   notifications: NotificationsType;
   use24hTimeFormat: boolean;
   local: string;
+  proxyNumber: string;
 };
 
 export const initialState = {
@@ -52,6 +54,7 @@ export const initialState = {
   notifications: [],
   use24hTimeFormat: false,
   local: "",
+  proxyNumber: "",
 };
 
 const reducers = (
@@ -82,6 +85,7 @@ const appReducer = combineReducers({
   notifications: notificationsReducer,
   use24hTimeFormat: timeReducer,
   local: localReducer,
+  proxyNumber: configReducer,
 });
 
 export default reducers;

@@ -13,12 +13,9 @@ interface AddWhatsAppParticipantModalProps {
   isModalOpen: boolean;
   title: string;
   friendlyName: string;
-  proxyName: string;
   setName: (name: string) => void;
   setFriendlyName: (name: string) => void;
-  setProxyName: (name: string) => void;
   error: string;
-  errorProxy: string;
   nameInputRef: RefObject<HTMLInputElement>;
   onBack: () => void;
   action: () => void;
@@ -35,8 +32,6 @@ const AddWhatsAppParticipantModal: React.FC<
   );
   const whatsAppNum = getTranslation(local, "whatsAppNum");
   const whatsAppHelpTxt = getTranslation(local, "whatsAppHelpTxt");
-  const proxyNum = getTranslation(local, "proxyNum");
-  const proxyNumHelpTxt = getTranslation(local, "proxyNumHelpTxt");
 
   return (
     <>
@@ -76,23 +71,12 @@ const AddWhatsAppParticipantModal: React.FC<
                 error=""
                 help_text="Display name for this participant"
               />
-              <ModalInputField
-                label={proxyNum}
-                input={props.proxyName}
-                placeholder="123456789012"
-                onChange={props.setProxyName}
-                error={props.errorProxy}
-                help_text={proxyNumHelpTxt}
-                prefixType="WhatsApp"
-              />
             </Box>
           </ModalBody>
         }
         modalFooter={
           <AddParticipantFooter
-            isSaveDisabled={
-              !props.name.trim() || !props.proxyName.trim() || !!props.error
-            }
+            isSaveDisabled={!props.name.trim() || !!props.error}
             actionName={ActionName.Save}
             onBack={() => {
               props.onBack();
