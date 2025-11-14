@@ -73,6 +73,7 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
   const manageParticipants = getTranslation(local, "manageParticipants");
 
   const [name, setName] = useState("");
+  const [friendlyName, setFriendlyName] = useState("");
   const [error, setError] = useState("");
 
   const [nameProxy, setNameProxy] = useState("");
@@ -108,6 +109,7 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
 
   function emptyData() {
     setName("");
+    setFriendlyName("");
     setNameProxy("");
     setError("");
     setErrorProxy("");
@@ -184,6 +186,7 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
       {isAddSMSOpen && (
         <AddSMSParticipantModal
           name={name}
+          friendlyName={friendlyName}
           proxyName={nameProxy}
           isModalOpen={isAddSMSOpen}
           title={manageParticipants}
@@ -196,6 +199,7 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
                 : ""
             );
           }}
+          setFriendlyName={setFriendlyName}
           setProxyName={(name: string) => {
             const formattedName = formatPhoneNumber(name);
             setNameProxy(formattedName);
@@ -223,7 +227,8 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
                 SMS_PREFIX + name,
                 SMS_PREFIX + nameProxy,
                 sdkConvo,
-                addNotifications
+                addNotifications,
+                friendlyName
               );
               emptyData();
               handleSMSClose();
@@ -237,6 +242,7 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
       {isAddWhatsAppOpen && (
         <AddWhatsAppParticipantModal
           name={name}
+          friendlyName={friendlyName}
           proxyName={nameProxy}
           isModalOpen={isAddWhatsAppOpen}
           title={manageParticipants}
@@ -249,6 +255,7 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
                 : ""
             );
           }}
+          setFriendlyName={setFriendlyName}
           setProxyName={(name: string) => {
             const formattedName = formatPhoneNumber(name);
             setNameProxy(formattedName);
@@ -276,7 +283,8 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
                 WHATSAPP_PREFIX + name,
                 WHATSAPP_PREFIX + nameProxy,
                 sdkConvo,
-                addNotifications
+                addNotifications,
+                friendlyName
               );
               emptyData();
               handleWhatsAppClose();
@@ -290,12 +298,14 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
       {isAddChatOpen && (
         <AddChatParticipantModal
           name={name}
+          friendlyName={friendlyName}
           isModalOpen={isAddChatOpen}
           title={manageParticipants}
           setName={(name: string) => {
             setName(name);
             setErrors("");
           }}
+          setFriendlyName={setFriendlyName}
           error={error}
           nameInputRef={nameInputRef}
           handleClose={() => {
@@ -311,7 +321,7 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
             try {
               await addUserAsParticipant(
                 name.trim(),
-                name.trim(),
+                friendlyName.trim() || name.trim(),
                 props.convo.sid,
                 addNotifications
               );

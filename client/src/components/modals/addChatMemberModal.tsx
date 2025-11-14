@@ -10,7 +10,9 @@ import { useSelector } from "react-redux";
 
 interface AddChatParticipantModalProps {
   name: string;
+  friendlyName: string;
   setName: (name: string) => void;
+  setFriendlyName: (name: string) => void;
   error: string;
   nameInputRef: RefObject<HTMLInputElement>;
   onBack: () => void;
@@ -57,6 +59,14 @@ const AddChatParticipantModal: React.FC<AddChatParticipantModalProps> = (
                 error={props.error}
                 // error_text="Enter a valid user identity."
                 help_text={userIdentityHelperTxt}
+              />
+              <ModalInputField
+                label="Friendly Name"
+                input={props.friendlyName}
+                placeholder="John Doe"
+                onChange={props.setFriendlyName}
+                error=""
+                help_text="Display name for this participant"
               />
             </Box>
           </ModalBody>

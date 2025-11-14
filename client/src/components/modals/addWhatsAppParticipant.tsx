@@ -12,8 +12,10 @@ interface AddWhatsAppParticipantModalProps {
   name: string;
   isModalOpen: boolean;
   title: string;
+  friendlyName: string;
   proxyName: string;
   setName: (name: string) => void;
+  setFriendlyName: (name: string) => void;
   setProxyName: (name: string) => void;
   error: string;
   errorProxy: string;
@@ -65,6 +67,14 @@ const AddWhatsAppParticipantModal: React.FC<
                 error={props.error}
                 help_text={whatsAppHelpTxt}
                 prefixType="WhatsApp"
+              />
+              <ModalInputField
+                label="Friendly Name"
+                input={props.friendlyName}
+                placeholder="John Doe"
+                onChange={props.setFriendlyName}
+                error=""
+                help_text="Display name for this participant"
               />
               <ModalInputField
                 label={proxyNum}

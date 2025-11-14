@@ -12,8 +12,10 @@ interface AddSMSParticipantModalProps {
   name: string;
   isModalOpen: boolean;
   title: string;
+  friendlyName: string;
   proxyName: string;
   setName: (name: string) => void;
+  setFriendlyName: (name: string) => void;
   setProxyName: (name: string) => void;
   error: string;
   errorProxy: string;
@@ -63,6 +65,14 @@ const AddSMSParticipantModal: React.FC<AddSMSParticipantModalProps> = (
                 // error_text="Enter a valid phone number."
                 help_text={smsHelpTxt}
                 prefixType="SMS"
+              />
+              <ModalInputField
+                label="Friendly Name"
+                input={props.friendlyName}
+                placeholder="John Doe"
+                onChange={props.setFriendlyName}
+                error=""
+                help_text="Display name for this participant"
               />
               <ModalInputField
                 label={proxyNum}

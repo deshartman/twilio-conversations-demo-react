@@ -104,16 +104,29 @@ export const handler: AddUserFunction = async (
 
       // Now add the user as a participant to the conversation
       console.log('Attempting to add participant to conversation:', event.conversationSid);
-      const participant = await client.conversations.v1
+      let participant = await client.conversations.v1
         .services((context as any).CONVERSATION_SERVICE_SID)
         .conversations(event.conversationSid)
         .participants.create({
           identity: userIdentity
         });
 
+      // Update participant attributes to include friendly name
+      console.log('Setting participant attributes with friendlyName:', event.friendlyName);
+      participant = await client.conversations.v1
+        .services((context as any).CONVERSATION_SERVICE_SID)
+        .conversations(event.conversationSid)
+        .participants(participant.sid)
+        .update({
+          attributes: JSON.stringify({
+            friendlyName: event.friendlyName
+          })
+        });
+
       console.log('User participant added successfully:', {
         participantSid: participant.sid,
-        identity: participant.identity
+        identity: participant.identity,
+        attributes: participant.attributes
       });
 
       // Return success response

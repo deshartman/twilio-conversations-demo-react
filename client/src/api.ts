@@ -95,7 +95,8 @@ export async function addNonChatParticipant(
   number: string,
   proxyNumber: string,
   convo?: Conversation,
-  addNotifications?: (notifications: NotificationsType) => void
+  addNotifications?: (notifications: NotificationsType) => void,
+  friendlyName?: string
 ): Promise<ParticipantResponse> {
   if (convo === undefined) {
     throw new Error(
@@ -111,7 +112,7 @@ export async function addNonChatParticipant(
 
   try {
     const result = await convo.addNonChatParticipant(proxyNumber, number, {
-      friendlyName: number,
+      friendlyName: friendlyName || number,
     });
     successNotification({
       message: PARTICIPANT_MESSAGES.ADDED,
