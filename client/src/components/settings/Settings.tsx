@@ -272,7 +272,7 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
               ); // TEMP LOGGING
               await addNonChatParticipant(
                 WHATSAPP_PREFIX + name,
-                proxyNumber,
+                "whatsapp:" + proxyNumber,
                 sdkConvo,
                 addNotifications,
                 friendlyName
