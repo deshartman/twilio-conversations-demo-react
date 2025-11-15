@@ -9,6 +9,7 @@ import { ActionType } from "../action-types";
 import { ReduxConversation } from "../reducers/convoReducer";
 import { ReduxMessage } from "../reducers/messageListReducer";
 import { NotificationsType } from "../reducers/notificationsReducer";
+import { ProxyNumbers } from "../../api";
 
 interface LoginAction {
   type: ActionType.LOGIN;
@@ -134,7 +135,7 @@ interface UpdateLocal {
 
 interface SetProxyNumber {
   type: ActionType.SET_PROXY_NUMBER;
-  payload: string;
+  payload: ProxyNumbers;
 }
 
 export type Action =

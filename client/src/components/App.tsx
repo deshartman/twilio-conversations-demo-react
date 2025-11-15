@@ -8,13 +8,14 @@ import { Box, Spinner } from "@twilio-paste/core";
 import Login from "./login/login";
 import AppContainer from "./AppContainer";
 import { actionCreators, AppState } from "../store";
-import { getToken, getProxyNumber } from "../api";
+import { getToken, getProxyNumber, ProxyNumbers } from "../api";
 
 // TEMP LOGGING - Remove after testing
-const tempLogProxyFetch = (proxyNumber: string) => {
-  console.log("=== PROXY NUMBER FETCHED ===");
-  console.log("Proxy Number:", proxyNumber);
-  console.log("===========================");
+const tempLogProxyFetch = (proxyNumbers: ProxyNumbers) => {
+  console.log("=== PROXY NUMBERS FETCHED ===");
+  console.log("SMS Proxy Number:", proxyNumbers.smsProxyNumber);
+  console.log("WhatsApp Proxy Number:", proxyNumbers.whatsappProxyNumber);
+  console.log("=============================");
 };
 
 function App(): ReactElement {
@@ -28,14 +29,18 @@ function App(): ReactElement {
 
   const username = localStorage.getItem("username") ?? "";
   const password = localStorage.getItem("password") ?? "";
+  const friendlyName = localStorage.getItem("friendlyName") ?? "";
 
   useEffect(() => {
     if (username.length > 0 && password.length > 0) {
-      Promise.all([getToken(username, password), getProxyNumber()])
-        .then(([token, proxyNumber]) => {
-          tempLogProxyFetch(proxyNumber); // TEMP LOGGING
+      Promise.all([
+        getToken(username, password, friendlyName),
+        getProxyNumber(),
+      ])
+        .then(([token, proxyNumbers]) => {
+          tempLogProxyFetch(proxyNumbers); // TEMP LOGGING
           login(token);
-          setProxyNumber(proxyNumber);
+          setProxyNumber(proxyNumbers);
         })
         .catch((error) => {
           console.error("Failed to fetch token or config:", error);
@@ -51,11 +56,11 @@ function App(): ReactElement {
   const setToken = async (token: string) => {
     login(token);
     try {
-      const proxyNumber = await getProxyNumber();
-      tempLogProxyFetch(proxyNumber); // TEMP LOGGING
-      setProxyNumber(proxyNumber);
+      const proxyNumbers = await getProxyNumber();
+      tempLogProxyFetch(proxyNumbers); // TEMP LOGGING
+      setProxyNumber(proxyNumbers);
     } catch (error) {
-      console.error("Failed to fetch proxy number:", error);
+      console.error("Failed to fetch proxy numbers:", error);
     }
     setLoading(false);
   };

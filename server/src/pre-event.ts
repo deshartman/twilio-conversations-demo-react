@@ -116,8 +116,23 @@ export const handler: PreEventFunction = async (
             if (participant.messagingBinding?.friendlyName) {
               friendlyName = participant.messagingBinding.friendlyName;
             }
-            // Check attributes.friendlyName (for chat users)
-            else if (participant.attributes) {
+            // Check User object friendlyName (for logged in chat users)
+            else if (participant.identity) {
+              try {
+                const user = await client.conversations.v1
+                  .services(serviceSid)
+                  .users(participant.identity)
+                  .fetch();
+                if (user.friendlyName) {
+                  friendlyName = user.friendlyName;
+                }
+              } catch (userError: any) {
+                console.log('Failed to fetch user:', userError.code || userError.message);
+                // If user doesn't exist, fall through to check participant attributes
+              }
+            }
+            // Check attributes.friendlyName (for chat users added via add-users)
+            if (friendlyName === 'Unknown' && participant.attributes) {
               try {
                 const attributes = JSON.parse(participant.attributes);
                 if (attributes.friendlyName) {

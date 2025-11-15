@@ -11,6 +11,7 @@ import { ActionType } from "../action-types";
 import { Action } from "../actions";
 import { NotificationsType } from "../reducers/notificationsReducer";
 import { ReduxMessage } from "../reducers/messageListReducer";
+import { ProxyNumbers } from "../../api";
 
 export const login = (token: string) => {
   return (dispatch: Dispatch<Action>): void => {
@@ -239,11 +240,11 @@ export const updateLocal = (local: string) => {
   };
 };
 
-export const setProxyNumber = (proxyNumber: string) => {
+export const setProxyNumber = (proxyNumbers: ProxyNumbers) => {
   return (dispatch: Dispatch<Action>): void => {
     dispatch({
       type: ActionType.SET_PROXY_NUMBER,
-      payload: proxyNumber,
+      payload: proxyNumbers,
     });
   };
 };

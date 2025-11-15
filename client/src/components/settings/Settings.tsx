@@ -82,7 +82,7 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
   const handleAIAgentClose = () => setIsAddAIAgentOpen(false);
 
   const local = useSelector((state: AppState) => state.local);
-  const proxyNumber = useSelector((state: AppState) => state.proxyNumber);
+  const proxyNumbers = useSelector((state: AppState) => state.proxyNumber);
   const manageParticipants = getTranslation(local, "manageParticipants");
 
   const [name, setName] = useState("");
@@ -219,10 +219,14 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
           }}
           action={async () => {
             try {
-              tempLogProxyUsage("SMS", SMS_PREFIX + name, proxyNumber); // TEMP LOGGING
+              tempLogProxyUsage(
+                "SMS",
+                SMS_PREFIX + name,
+                proxyNumbers.smsProxyNumber
+              ); // TEMP LOGGING
               await addNonChatParticipant(
                 SMS_PREFIX + name,
-                proxyNumber,
+                proxyNumbers.smsProxyNumber,
                 sdkConvo,
                 addNotifications,
                 friendlyName
@@ -268,11 +272,11 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
               tempLogProxyUsage(
                 "WhatsApp",
                 WHATSAPP_PREFIX + name,
-                proxyNumber
+                proxyNumbers.whatsappProxyNumber
               ); // TEMP LOGGING
               await addNonChatParticipant(
                 WHATSAPP_PREFIX + name,
-                "whatsapp:" + proxyNumber,
+                "whatsapp:" + proxyNumbers.whatsappProxyNumber,
                 sdkConvo,
                 addNotifications,
                 friendlyName

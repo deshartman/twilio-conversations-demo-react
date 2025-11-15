@@ -20,6 +20,7 @@ import notificationsReducer, {
 import timeReducer from "./timeReducer";
 import localReducer from "./localReducer";
 import configReducer from "./configReducer";
+import { ProxyNumbers } from "../../api";
 
 export type AppState = {
   token: string;
@@ -36,7 +37,7 @@ export type AppState = {
   notifications: NotificationsType;
   use24hTimeFormat: boolean;
   local: string;
-  proxyNumber: string;
+  proxyNumber: ProxyNumbers;
 };
 
 export const initialState = {
@@ -54,7 +55,10 @@ export const initialState = {
   notifications: [],
   use24hTimeFormat: false,
   local: "",
-  proxyNumber: "",
+  proxyNumber: {
+    smsProxyNumber: "",
+    whatsappProxyNumber: "",
+  },
 };
 
 const reducers = (

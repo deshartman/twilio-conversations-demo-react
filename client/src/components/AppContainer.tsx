@@ -71,6 +71,7 @@ const AppContainer: React.FC = () => {
 
   const username = localStorage.getItem("username");
   const password = localStorage.getItem("password");
+  const friendlyName = localStorage.getItem("friendlyName");
 
   const dispatch = useDispatch();
   const {
@@ -232,16 +233,16 @@ const AppContainer: React.FC = () => {
     });
 
     client.on("tokenAboutToExpire", async () => {
-      if (username && password) {
-        const token = await getToken(username, password);
+      if (username && password && friendlyName) {
+        const token = await getToken(username, password, friendlyName);
         await client.updateToken(token);
         login(token);
       }
     });
 
     client.on("tokenExpired", async () => {
-      if (username && password) {
-        const token = await getToken(username, password);
+      if (username && password && friendlyName) {
+        const token = await getToken(username, password, friendlyName);
         login(token);
         setClientIteration((x) => x + 1);
       }

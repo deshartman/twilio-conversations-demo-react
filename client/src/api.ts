@@ -26,6 +26,11 @@ import { ReduxParticipant } from "./store/reducers/participantsReducer";
 
 type ParticipantResponse = ReturnType<typeof Conversation.prototype.add>;
 
+export interface ProxyNumbers {
+  smsProxyNumber: string;
+  whatsappProxyNumber: string;
+}
+
 export async function addConversation(
   name: string,
   updateParticipants: (participants: Participant[], sid: string) => void,
@@ -171,14 +176,19 @@ export async function updateFriendlyName(
 
 export async function getToken(
   username: string,
-  password: string
+  password: string,
+  friendlyName: string
 ): Promise<string> {
   // Relative path to serverless function - works when client is served from assets folder
   const requestAddress = "/get-access-token";
 
   try {
     const response = await axios.get(requestAddress, {
-      params: { identity: username, password: password },
+      params: {
+        identity: username,
+        password: password,
+        friendlyName: friendlyName,
+      },
     });
     return response.data;
   } catch (error) {
@@ -191,15 +201,18 @@ export async function getToken(
   }
 }
 
-export async function getProxyNumber(): Promise<string> {
+export async function getProxyNumber(): Promise<ProxyNumbers> {
   const requestAddress = "/get-config";
 
   try {
     const response = await axios.get(requestAddress);
-    return response.data.proxyNumber;
+    return {
+      smsProxyNumber: response.data.smsProxyNumber,
+      whatsappProxyNumber: response.data.whatsappProxyNumber,
+    };
   } catch (error) {
     console.error(`ERROR received from ${requestAddress}: ${error}\n`);
-    throw new Error(`Failed to fetch proxy number: ${error}\n`);
+    throw new Error(`Failed to fetch proxy numbers: ${error}\n`);
   }
 }
 

@@ -2,12 +2,14 @@ import '@twilio-labs/serverless-runtime-types';
 import { Context, ServerlessCallback, ServerlessFunctionSignature } from '@twilio-labs/serverless-runtime-types/types';
 
 export interface ServerlessEnvironment {
-  TWILIO_PROXY_NUMBER: string;
+  SMS_PROXY_NUMBER: string;
+  WHATSAPP_PROXY_NUMBER: string;
   [key: string]: string | undefined;
 }
 
 export interface ConfigResponse {
-  proxyNumber: string;
+  smsProxyNumber: string;
+  whatsappProxyNumber: string;
 }
 
 type GetConfigFunction = ServerlessFunctionSignature<ServerlessEnvironment>;
@@ -18,20 +20,29 @@ export const handler: GetConfigFunction = async (
   callback: ServerlessCallback
 ) => {
   try {
-    // Validate that proxy number is configured
-    if (!context.TWILIO_PROXY_NUMBER) {
-      console.error('TWILIO_PROXY_NUMBER not configured in environment');
+    // Validate that both proxy numbers are configured
+    if (!context.SMS_PROXY_NUMBER) {
+      console.error('SMS_PROXY_NUMBER not configured in environment');
       return callback(null, {
         success: false,
-        error: 'Proxy number not configured'
+        error: 'SMS proxy number not configured'
+      });
+    }
+
+    if (!context.WHATSAPP_PROXY_NUMBER) {
+      console.error('WHATSAPP_PROXY_NUMBER not configured in environment');
+      return callback(null, {
+        success: false,
+        error: 'WhatsApp proxy number not configured'
       });
     }
 
     const response: ConfigResponse = {
-      proxyNumber: context.TWILIO_PROXY_NUMBER
+      smsProxyNumber: context.SMS_PROXY_NUMBER,
+      whatsappProxyNumber: context.WHATSAPP_PROXY_NUMBER
     };
 
-    console.log('Config requested, returning proxy number:', context.TWILIO_PROXY_NUMBER);
+    console.log('Config requested, returning proxy numbers - SMS:', context.SMS_PROXY_NUMBER, 'WhatsApp:', context.WHATSAPP_PROXY_NUMBER);
     callback(null, response);
 
   } catch (error: unknown) {

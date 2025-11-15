@@ -20,16 +20,22 @@ interface LoginProps {
 async function login(
   username: string,
   password: string,
+  friendlyName: string,
   setToken: (token: string) => Promise<void>
 ): Promise<string> {
   try {
-    const token = await getToken(username.trim(), password);
+    const token = await getToken(
+      username.trim(),
+      password,
+      friendlyName.trim()
+    );
     if (token === "") {
       return "Received an empty token from backend.";
     }
 
     localStorage.setItem("username", username);
     localStorage.setItem("password", password);
+    localStorage.setItem("friendlyName", friendlyName);
     await setToken(token);
 
     return "";
@@ -50,10 +56,11 @@ const Login: React.FC<LoginProps> = (props: LoginProps) => {
   const [formError, setFormError] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [friendlyName, setFriendlyName] = useState("");
   const [, AlertsView] = useAppAlert();
 
   const handleLogin = async () => {
-    const error = await login(username, password, props.setToken);
+    const error = await login(username, password, friendlyName, props.setToken);
     if (error) {
       setFormError(error);
     }
@@ -73,7 +80,7 @@ const Login: React.FC<LoginProps> = (props: LoginProps) => {
       document.removeEventListener("keydown", handleKeyPress);
       abortController.abort();
     };
-  }, [password, username]);
+  }, [password, username, friendlyName]);
 
   return (
     <Box style={styles.loginContainer}>
@@ -133,10 +140,32 @@ const Login: React.FC<LoginProps> = (props: LoginProps) => {
               id="password"
             />
           </Box>
+          <Box style={styles.userInput}>
+            <ModalInputField
+              label="Display Name"
+              placeholder=""
+              error={
+                isFormDirty && !friendlyName.trim()
+                  ? "Enter a display name."
+                  : ""
+              }
+              input={friendlyName}
+              onChange={(name: string) => {
+                setFriendlyName(name);
+                setFormError("");
+              }}
+              onBlur={() => {
+                if (username || password) {
+                  setFormDirty(true);
+                }
+              }}
+              id="friendlyName"
+            />
+          </Box>
           <Box style={styles.loginButton}>
             <Button
               fullWidth
-              disabled={!username || !password}
+              disabled={!username || !password || !friendlyName}
               variant="primary"
               onClick={handleLogin}
               id="login"
