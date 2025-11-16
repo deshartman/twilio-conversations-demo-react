@@ -43,6 +43,38 @@ export interface PostEventResponse {
 
 type PostEventFunction = ServerlessFunctionSignature<{}, ConversationWebhookEvent>;
 
+/**
+ * Generates a Slack-compatible channel name from a conversation friendly name
+ * @param friendlyName - The Twilio Conversation friendly name
+ * @param conversationSid - The Twilio Conversation SID (used as fallback)
+ * @returns Sanitized channel name (lowercase, alphanumeric + hyphens/underscores, max 80 chars)
+ */
+function generateChannelName(friendlyName: string | undefined, conversationSid: string): string {
+  // Use friendly name if available, otherwise use SID
+  const baseName = friendlyName || `conversation-${conversationSid}`;
+
+  // Sanitize for Slack requirements:
+  // - Max 80 characters
+  // - Lowercase only
+  // - Alphanumeric, hyphens, underscores only
+  // - No consecutive hyphens
+  // - No leading/trailing hyphens
+
+  let channelName = baseName
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]/g, '-')  // Replace non-alphanumeric with hyphen
+    .replace(/-+/g, '-')            // Remove consecutive hyphens
+    .replace(/^-|-$/g, '')          // Remove leading/trailing hyphens
+    .substring(0, 80);              // Max 80 chars
+
+  // Ensure we have at least some valid name
+  if (!channelName || channelName.length === 0) {
+    channelName = `conv-${conversationSid.substring(2, 10).toLowerCase()}`;
+  }
+
+  return channelName;
+}
+
 export const handler: PostEventFunction = async (
   context: Context<{}>,
   event: ConversationWebhookEvent,
@@ -107,108 +139,202 @@ export const handler: PostEventFunction = async (
               const conversationAttrs = conversation.attributes ? JSON.parse(conversation.attributes) : {};
               const slackParticipants = conversationAttrs.slackParticipants || {};
 
-              // If conversation has Slack participants, forward the message
-              if (Object.keys(slackParticipants).length > 0) {
+              // Auto-create Slack channel if Slack is enabled but channel doesn't exist yet
+              if (conversationAttrs.slackEnabled && !conversationAttrs.slackChannel && Object.keys(slackParticipants).length > 0) {
+                console.log('Auto-creating Slack channel for conversation:', event.ConversationSid);
+
                 const slackBotToken = (context as any).SLACK_OAUTH_BOT_TOKEN;
 
                 if (slackBotToken) {
-                  console.log('Forwarding message to Slack participants');
+                  try {
+                    // Generate channel name from conversation friendly name
+                    const channelName = generateChannelName(conversation.friendlyName, event.ConversationSid);
+                    console.log(`Creating Slack channel: #${channelName}`);
 
-                  // Forward to each Slack participant
-                  for (const [slackUserId, participantData] of Object.entries(slackParticipants)) {
-                    try {
-                      const channelId = (participantData as any).channelId;
+                    // Create channel via Slack API
+                    const createResponse = await fetch('https://slack.com/api/conversations.create', {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${slackBotToken}`,
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify({
+                        name: channelName,
+                        is_private: false
+                      })
+                    });
 
-                      if (!channelId) {
-                        console.error('No channel ID for Slack user:', slackUserId);
-                        continue;
-                      }
+                    const createData = await createResponse.json();
 
-                      // Build message blocks for rich formatting
-                      const messageBlocks: any[] = [];
-
-                      // Add text message
-                      if (event.Body) {
-                        messageBlocks.push({
-                          type: 'section',
-                          text: {
-                            type: 'mrkdwn',
-                            text: `*${event.Author}:* ${event.Body}`
-                          }
+                    if (!createData.ok) {
+                      console.error('Failed to create Slack channel:', createData.error);
+                      // If channel name is taken, try with conversation SID suffix
+                      if (createData.error === 'name_taken') {
+                        console.log('Channel name taken, retrying with SID suffix');
+                        const retryName = `${channelName}-${event.ConversationSid.substring(2, 8).toLowerCase()}`;
+                        const retryResponse = await fetch('https://slack.com/api/conversations.create', {
+                          method: 'POST',
+                          headers: {
+                            'Authorization': `Bearer ${slackBotToken}`,
+                            'Content-Type': 'application/json'
+                          },
+                          body: JSON.stringify({
+                            name: retryName,
+                            is_private: false
+                          })
                         });
+                        const retryData = await retryResponse.json();
+                        if (retryData.ok) {
+                          Object.assign(createData, retryData);
+                        }
+                      }
+                    }
+
+                    if (createData.ok && createData.channel) {
+                      // Store channel mapping in conversation attributes
+                      conversationAttrs.slackChannel = {
+                        channelId: createData.channel.id,
+                        channelName: createData.channel.name,
+                        createdAt: new Date().toISOString()
+                      };
+
+                      // Invite all Slack participants to the channel
+                      console.log(`Inviting ${Object.keys(slackParticipants).length} Slack users to channel`);
+                      for (const slackUserId of Object.keys(slackParticipants)) {
+                        try {
+                          const inviteResponse = await fetch('https://slack.com/api/conversations.invite', {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${slackBotToken}`,
+                              'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                              channel: createData.channel.id,
+                              users: slackUserId
+                            })
+                          });
+
+                          const inviteData = await inviteResponse.json();
+                          if (!inviteData.ok) {
+                            console.error(`Failed to invite user ${slackUserId}:`, inviteData.error);
+                          } else {
+                            console.log(`✅ Invited user ${slackUserId} to channel`);
+                          }
+                        } catch (inviteError) {
+                          console.error(`Error inviting user ${slackUserId}:`, inviteError);
+                        }
                       }
 
-                      // TEMP LOGGING - Remove after debugging
-                      const slackPayload = {
-                        channel: channelId,
-                        blocks: messageBlocks.length > 0 ? messageBlocks : undefined,
-                        text: event.Body || '(no text)'
-                      };
-                      console.log('=== SENDING MESSAGE TO SLACK ===');
-                      console.log('Channel ID:', channelId);
-                      console.log('Slack User ID:', slackUserId);
-                      console.log('Payload:', JSON.stringify(slackPayload, null, 2));
-                      console.log('================================');
-
-                      // Send message to Slack
-                      const slackResponse = await fetch('https://slack.com/api/chat.postMessage', {
-                        method: 'POST',
-                        headers: {
-                          'Authorization': `Bearer ${slackBotToken}`,
-                          'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(slackPayload)
+                      // Update conversation with channel info
+                      await conversation.update({
+                        attributes: JSON.stringify(conversationAttrs)
                       });
 
-                      const slackData = await slackResponse.json();
-
-                      // TEMP LOGGING - Remove after debugging
-                      console.log('=== SLACK API RESPONSE ===');
-                      console.log('HTTP Status:', slackResponse.status);
-                      console.log('Response Data:', JSON.stringify(slackData, null, 2));
-                      console.log('==========================');
-
-                      if (!slackData.ok) {
-                        console.error('❌ Failed to send message to Slack:', slackData.error);
-                        if (slackData.error === 'not_in_channel' || slackData.error === 'channel_not_found') {
-                          console.error('⚠️  Bot is not in the channel or channel does not exist');
-                        } else if (slackData.error === 'missing_scope') {
-                          console.error('⚠️  Missing required Slack OAuth scope: chat:write');
-                        }
-                      } else {
-                        console.log('✅ Message forwarded to Slack user:', slackUserId);
-                        console.log('   Message TS:', slackData.ts);
-                        console.log('   Channel:', slackData.channel);
-                      }
-
-                      // Handle media attachments
-                      if (event.Media && event.Media.length > 0 && event.MessageSid) {
-                        for (const media of event.Media) {
-                          try {
-                            // Note: You would need to implement media forwarding here
-                            // This requires downloading from Twilio and uploading to Slack
-                            console.log('Media attachment detected:', media.Filename);
-
-                            // Send a message about the media file
-                            await fetch('https://slack.com/api/chat.postMessage', {
-                              method: 'POST',
-                              headers: {
-                                'Authorization': `Bearer ${slackBotToken}`,
-                                'Content-Type': 'application/json'
-                              },
-                              body: JSON.stringify({
-                                channel: channelId,
-                                text: `📎 Media file: ${media.Filename || 'attachment'} (${media.ContentType})`
-                              })
-                            });
-                          } catch (mediaError) {
-                            console.error('Error forwarding media to Slack:', mediaError);
-                          }
-                        }
-                      }
-                    } catch (slackError) {
-                      console.error('Error forwarding to Slack user:', slackUserId, slackError);
+                      console.log(`✅ Created and configured Slack channel: #${createData.channel.name} (${createData.channel.id})`);
                     }
+                  } catch (channelCreationError) {
+                    console.error('Error creating Slack channel:', channelCreationError);
+                    // Continue with message forwarding even if channel creation fails
+                  }
+                }
+              }
+
+              // If conversation has Slack channel, forward the message
+              if (conversationAttrs.slackChannel) {
+                const slackBotToken = (context as any).SLACK_OAUTH_BOT_TOKEN;
+
+                if (slackBotToken) {
+                  console.log('Forwarding message to Slack channel:', conversationAttrs.slackChannel.channelId);
+
+                  try {
+                    const channelId = conversationAttrs.slackChannel.channelId;
+
+                    // Build message blocks for rich formatting
+                    const messageBlocks: any[] = [];
+
+                    // Add text message
+                    if (event.Body) {
+                      messageBlocks.push({
+                        type: 'section',
+                        text: {
+                          type: 'mrkdwn',
+                          text: `*${event.Author}:* ${event.Body}`
+                        }
+                      });
+                    }
+
+                    // TEMP LOGGING - Remove after debugging
+                    const slackPayload = {
+                      channel: channelId,
+                      blocks: messageBlocks.length > 0 ? messageBlocks : undefined,
+                      text: event.Body || '(no text)',
+                      unfurl_links: false,
+                      unfurl_media: false
+                    };
+                    console.log('=== SENDING MESSAGE TO SLACK CHANNEL ===');
+                    console.log('Channel ID:', channelId);
+                    console.log('Channel Name:', conversationAttrs.slackChannel.channelName);
+                    console.log('Payload:', JSON.stringify(slackPayload, null, 2));
+                    console.log('========================================');
+
+                    // Send message to Slack channel (all participants will see it)
+                    const slackResponse = await fetch('https://slack.com/api/chat.postMessage', {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${slackBotToken}`,
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify(slackPayload)
+                    });
+
+                    const slackData = await slackResponse.json();
+
+                    // TEMP LOGGING - Remove after debugging
+                    console.log('=== SLACK API RESPONSE ===');
+                    console.log('HTTP Status:', slackResponse.status);
+                    console.log('Response Data:', JSON.stringify(slackData, null, 2));
+                    console.log('==========================');
+
+                    if (!slackData.ok) {
+                      console.error('❌ Failed to send message to Slack:', slackData.error);
+                      if (slackData.error === 'not_in_channel' || slackData.error === 'channel_not_found') {
+                        console.error('⚠️  Bot is not in the channel or channel does not exist');
+                      } else if (slackData.error === 'missing_scope') {
+                        console.error('⚠️  Missing required Slack OAuth scope: chat:write');
+                      }
+                    } else {
+                      console.log('✅ Message forwarded to Slack channel:', conversationAttrs.slackChannel.channelName);
+                      console.log('   Message TS:', slackData.ts);
+                      console.log('   Channel:', slackData.channel);
+                    }
+
+                    // Handle media attachments
+                    if (event.Media && event.Media.length > 0 && event.MessageSid) {
+                      for (const media of event.Media) {
+                        try {
+                          // Note: You would need to implement media forwarding here
+                          // This requires downloading from Twilio and uploading to Slack
+                          console.log('Media attachment detected:', media.Filename);
+
+                          // Send a message about the media file
+                          await fetch('https://slack.com/api/chat.postMessage', {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${slackBotToken}`,
+                              'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                              channel: channelId,
+                              text: `📎 Media file: ${media.Filename || 'attachment'} (${media.ContentType})`
+                            })
+                          });
+                        } catch (mediaError) {
+                          console.error('Error forwarding media to Slack:', mediaError);
+                        }
+                      }
+                    }
+                  } catch (slackError) {
+                    console.error('Error forwarding to Slack channel:', slackError);
                   }
                 } else {
                   console.log('Slack bot token not configured, skipping Slack forwarding');

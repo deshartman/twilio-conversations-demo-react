@@ -32,6 +32,8 @@ export interface SlackWebhookEvent {
   challenge?: string;
   token?: string;
   team_id?: string;
+  event_id?: string;
+  event_time?: number;
   event?: SlackEvent;
   request: {
     cookies: {};
@@ -43,6 +45,51 @@ export interface SlackWebhookEvent {
 }
 
 type SlackWebhookFunction = ServerlessFunctionSignature<ServerlessEnvironment, SlackWebhookEvent>;
+
+// Event deduplication cache (in-memory)
+// Maps event_id -> timestamp of when it was processed
+const processedEvents = new Map<string, number>();
+
+// Clean up events older than 1 hour
+function cleanupOldEvents() {
+  const oneHourAgo = Date.now() - (60 * 60 * 1000);
+  for (const [eventId, timestamp] of processedEvents.entries()) {
+    if (timestamp < oneHourAgo) {
+      processedEvents.delete(eventId);
+    }
+  }
+}
+
+// Check if event was already processed
+function isEventProcessed(eventId: string | undefined, eventTime: number | undefined): boolean {
+  console.log('→ isEventProcessed called with eventId:', eventId);
+  console.log('→ Current cache size:', processedEvents.size);
+  console.log('→ Cache contents:', Array.from(processedEvents.keys()));
+
+  if (!eventId) {
+    // No event_id means we can't dedupe, so process it
+    console.log('→ No event_id, returning false');
+    return false;
+  }
+
+  // Clean up old events periodically (10% chance on each call)
+  if (Math.random() < 0.1) {
+    cleanupOldEvents();
+  }
+
+  const hasEvent = processedEvents.has(eventId);
+  console.log('→ Cache has this event?', hasEvent);
+
+  if (hasEvent) {
+    console.log(`⚠️  Duplicate event detected: ${eventId} (already processed)`);
+    return true;
+  }
+
+  // Mark as processed
+  processedEvents.set(eventId, Date.now());
+  console.log('→ Added to cache. New cache size:', processedEvents.size);
+  return false;
+}
 
 // TEMP LOGGING - Remove after debugging Slack signature
 const tempLogSignatureVerification = (
@@ -132,7 +179,7 @@ async function getSlackUserInfo(userId: string, botToken: string): Promise<any> 
   }
 }
 
-// Find or create conversation for Slack user
+// Find conversation linked to Slack channel
 async function findOrCreateConversation(
   client: any,
   serviceSid: string,
@@ -141,38 +188,33 @@ async function findOrCreateConversation(
   slackUserEmail: string
 ): Promise<any> {
   try {
-    // Search for existing conversation with this Slack user
+    // Search for existing conversation linked to this Slack channel
+    console.log('Searching for conversation linked to Slack channel:', slackChannelId);
     const conversations = await client.conversations.v1
       .services(serviceSid)
       .conversations.list({ limit: 100 });
 
     for (const conversation of conversations) {
       const attrs = conversation.attributes ? JSON.parse(conversation.attributes) : {};
-      if (attrs.slackParticipants && attrs.slackParticipants[slackUserId]) {
-        console.log('Found existing conversation:', conversation.sid);
+      // Check if this conversation is linked to the Slack channel
+      if (attrs.slackChannel && attrs.slackChannel.channelId === slackChannelId) {
+        console.log('Found existing conversation for Slack channel:', conversation.sid);
+
+        // Check if this user is a Slack participant
+        if (!attrs.slackParticipants || !attrs.slackParticipants[slackUserId]) {
+          console.log('User not yet a participant, will be added automatically');
+        }
+
         return conversation;
       }
     }
 
-    // No existing conversation found, create a new one
-    console.log('Creating new conversation for Slack user:', slackUserId);
-    const newConversation = await client.conversations.v1
-      .services(serviceSid)
-      .conversations.create({
-        friendlyName: `Slack DM - ${slackUserEmail}`,
-        attributes: JSON.stringify({
-          slackParticipants: {
-            [slackUserId]: {
-              channelId: slackChannelId,
-              email: slackUserEmail
-            }
-          }
-        })
-      });
-
-    return newConversation;
+    // No conversation found for this Slack channel
+    console.log('No Twilio conversation found for Slack channel:', slackChannelId);
+    console.log('This channel is not linked to any Twilio conversation. Message will be ignored.');
+    throw new Error('CHANNEL_NOT_LINKED');
   } catch (error) {
-    console.error('Error finding/creating conversation:', error);
+    console.error('Error finding conversation:', error);
     throw error;
   }
 }
@@ -296,6 +338,21 @@ export const handler: SlackWebhookFunction = async (
 
     // Handle event callback
     if (event.type === 'event_callback' && event.event) {
+      // TEMP LOGGING - Check event_id for deduplication
+      console.log('=== EVENT DEDUPLICATION CHECK ===');
+      console.log('Event ID:', event.event_id);
+      console.log('Event Time:', event.event_time);
+      console.log('Event Type:', event.type);
+      console.log('=================================');
+
+      // Check for duplicate events
+      if (isEventProcessed(event.event_id, event.event_time)) {
+        console.log('⚠️  Duplicate event ignored, returning 200');
+        response.setStatusCode(200);
+        response.setBody(JSON.stringify({ status: 'duplicate_event_ignored' }));
+        return callback(null, response);
+      }
+
       const slackEvent = event.event;
 
       // TEMP LOGGING - Remove after debugging
@@ -308,13 +365,32 @@ export const handler: SlackWebhookFunction = async (
       console.log('Text:', slackEvent.text?.substring(0, 100));
       console.log('============================');
 
-      // Only handle DM messages (channel_type: 'im')
-      if (slackEvent.type === 'message' && slackEvent.channel_type === 'im') {
+      // Only handle channel messages (channel_type: 'channel')
+      if (slackEvent.type === 'message' && slackEvent.channel_type === 'channel') {
         // Ignore bot messages to prevent loops
         if ((slackEvent as any).bot_id || (slackEvent as any).subtype === 'bot_message') {
           console.log('⚠️  Ignoring bot message (this is expected for messages sent by our bot)');
           response.setStatusCode(200);
           response.setBody(JSON.stringify({ status: 'ignored_bot_message' }));
+          return callback(null, response);
+        }
+
+        // Ignore system messages (channel joins, leaves, etc.)
+        const systemSubtypes = [
+          'channel_join',
+          'channel_leave',
+          'channel_archive',
+          'channel_unarchive',
+          'channel_name',
+          'channel_purpose',
+          'channel_topic',
+          'pinned_item',
+          'unpinned_item'
+        ];
+        if ((slackEvent as any).subtype && systemSubtypes.includes((slackEvent as any).subtype)) {
+          console.log(`⚠️  Ignoring system message subtype: ${(slackEvent as any).subtype}`);
+          response.setStatusCode(200);
+          response.setBody(JSON.stringify({ status: 'ignored_system_message' }));
           return callback(null, response);
         }
 
@@ -330,7 +406,7 @@ export const handler: SlackWebhookFunction = async (
           return callback(null, response);
         }
 
-        console.log('Processing Slack DM:', {
+        console.log('Processing Slack channel message:', {
           userId: slackUserId,
           channelId: slackChannelId,
           text: messageText.substring(0, 50),
@@ -345,6 +421,14 @@ export const handler: SlackWebhookFunction = async (
           // Get Slack user info
           const slackUser = await getSlackUserInfo(slackUserId, slackBotToken);
           const slackUserEmail = slackUser.profile.email;
+
+          // Skip if user doesn't have an email (e.g., bots, system users)
+          if (!slackUserEmail) {
+            console.log('⚠️  Skipping user without email address:', slackUserId);
+            response.setStatusCode(200);
+            response.setBody(JSON.stringify({ status: 'ignored_user_no_email' }));
+            return callback(null, response);
+          }
 
           // Find or create conversation
           const conversation = await findOrCreateConversation(
@@ -399,21 +483,44 @@ export const handler: SlackWebhookFunction = async (
             // Format message with friendly name prefix (consistent with Twilio→Slack format)
             const formattedBody = `[${friendlyName}]\n${messageText}`;
 
-            await client.conversations.v1
+            // Check for duplicate messages before adding
+            console.log('Checking for duplicate messages...');
+            const recentMessages = await client.conversations.v1
               .services(serviceSid)
               .conversations(conversation.sid)
-              .messages.create({
-                author: userIdentity,
-                body: formattedBody,
-                attributes: JSON.stringify({
-                  source: 'slack',
-                  slackUserId: slackUserId,
-                  slackChannelId: slackChannelId,
-                  slackTimestamp: slackEvent.ts,
-                  friendlyName: friendlyName
-                })
-              });
-            console.log('Message added to conversation:', conversation.sid);
+              .messages.list({ limit: 20 });
+
+            // Look for duplicate message in last 30 seconds with same author and body
+            const thirtySecondsAgo = Date.now() - (30 * 1000);
+            const isDuplicate = recentMessages.some(msg => {
+              if (msg.author !== userIdentity) return false;
+              if (msg.body !== formattedBody) return false;
+
+              const msgTime = new Date(msg.dateCreated).getTime();
+              return msgTime > thirtySecondsAgo;
+            });
+
+            if (isDuplicate) {
+              console.log('⚠️  Duplicate message detected, skipping add');
+              console.log('   Author:', userIdentity);
+              console.log('   Body:', formattedBody.substring(0, 50) + '...');
+            } else {
+              await client.conversations.v1
+                .services(serviceSid)
+                .conversations(conversation.sid)
+                .messages.create({
+                  author: userIdentity,
+                  body: formattedBody,
+                  attributes: JSON.stringify({
+                    source: 'slack',
+                    slackUserId: slackUserId,
+                    slackChannelId: slackChannelId,
+                    slackTimestamp: slackEvent.ts,
+                    friendlyName: friendlyName
+                  })
+                });
+              console.log('Message added to conversation:', conversation.sid);
+            }
           }
 
           // Handle media files
@@ -435,11 +542,23 @@ export const handler: SlackWebhookFunction = async (
 
         } catch (processingError: any) {
           console.error('Error processing Slack message:', processingError);
-          response.setStatusCode(500);
-          response.setBody(JSON.stringify({
-            error: 'Failed to process message',
-            details: processingError.message
-          }));
+
+          // Handle channel not linked error gracefully (return 200 to prevent Slack retries)
+          if (processingError.message === 'CHANNEL_NOT_LINKED') {
+            console.log('⚠️  Ignoring message from unlinked Slack channel (this is expected)');
+            response.setStatusCode(200);
+            response.setBody(JSON.stringify({
+              status: 'ignored_unlinked_channel',
+              message: 'This Slack channel is not linked to any Twilio conversation'
+            }));
+          } else {
+            // Other errors - return 500
+            response.setStatusCode(500);
+            response.setBody(JSON.stringify({
+              error: 'Failed to process message',
+              details: processingError.message
+            }));
+          }
         }
 
         return callback(null, response);

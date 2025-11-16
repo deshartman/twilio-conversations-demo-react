@@ -1,27 +1,30 @@
-# Slack Direct Message Integration Setup Guide
+# Slack Channel Integration Setup Guide
 
-This guide walks you through configuring a Slack app to integrate with Twilio Conversations via Direct Messages (DMs).
+This guide walks you through configuring a Slack app to integrate with Twilio Conversations via shared Slack channels.
 
 ## Overview
 
 This integration allows:
 - Adding Slack users to Twilio Conversations by email
-- Two-way messaging between Twilio Conversations and Slack DMs
+- Two-way messaging between Twilio Conversations and Slack channels
 - Media/file sharing between platforms
-- Each Slack user gets their own private DM with the bot
+- Each Twilio Conversation gets its own shared Slack channel
+- Channel name automatically matches the Conversation name
 
 ## Architecture
 
 ```
-Twilio Conversation ←→ Twilio Functions ←→ Slack DMs
+Twilio Conversation ←→ Twilio Functions ←→ Slack Channel
                          (Bridge)
 ```
 
 **Message Flow:**
-- **Slack → Twilio**: Slack Events API webhook (`slack-webhook.ts`) receives DM messages and forwards to Twilio
-- **Twilio → Slack**: Post-event webhook (`post-event.ts`) receives Twilio messages and forwards to Slack DMs
+- **Slack → Twilio**: Slack Events API webhook (`slack-webhook.ts`) receives channel messages and forwards to Twilio
+- **Twilio → Slack**: Post-event webhook (`post-event.ts`) receives Twilio messages, auto-creates channel on first message, and forwards to Slack channel
 
 **Loop Prevention**: Messages are tagged with `source: 'slack'` attribute to prevent infinite forwarding
+
+**Channel Management**: Channels are auto-created when the first message is sent, with names matching the Twilio Conversation name
 
 ## Prerequisites
 
@@ -54,12 +57,15 @@ Click **"Add an OAuth Scope"** under **Bot Token Scopes** and add:
 | `users:read.email` | Look up users by email | Adding participants ✅ CRITICAL |
 | `users:read` | Get user information | Webhook processing |
 | `chat:write` | Send messages to Slack | Forwarding Twilio → Slack ✅ CRITICAL |
-| `im:write` | Open DM channels | Creating DM with user ✅ CRITICAL |
-| `im:read` | Read DM information | Webhook processing |
-| `im:history` | Access DM history | Message context |
+| `channels:read` | Read channel information | Webhook processing ✅ CRITICAL |
+| `channels:manage` | Create channels | Auto-creating channels ✅ CRITICAL |
+| `channels:history` | Read channel messages | Message context |
+| `channels:join` | Join channels | Bot channel membership |
 | `files:read` | Download shared files | Media forwarding |
 
-**⚠️ CRITICAL**: Without `users:read.email`, `chat:write`, and `im:write`, the integration will not work.
+**⚠️ CRITICAL**: Without `users:read.email`, `chat:write`, `channels:read`, and `channels:manage`, the integration will not work.
+
+**Note**: If you previously had `im:write`, `im:read`, and `im:history` scopes for DM-based integration, you can remove those and replace them with the channel scopes listed above.
 
 ### 3. Install App to Workspace
 
@@ -68,23 +74,7 @@ Click **"Add an OAuth Scope"** under **Bot Token Scopes** and add:
 3. Review permissions and click **"Allow"**
 4. Copy the **Bot User OAuth Token** (starts with `xoxb-`)
 
-### 4. Configure App Home (CRITICAL)
-
-Navigate to **App Home** in the sidebar.
-
-**⚠️ CRITICAL STEP**: Without this configuration, users will see "Sending messages to this app has been turned off" and cannot send messages from Slack.
-
-1. Scroll down to **"Show Tabs"** section
-2. Find **"Messages Tab"**
-3. **Toggle it ON** (green)
-4. ✅ **Check the box**: "Allow users to send Slash commands and messages from the messages tab"
-5. Click **"Save Changes"** if prompted
-
-**After enabling Messages Tab:**
-- You MUST **reinstall the app** to your workspace (go back to "Install App" → "Reinstall to Workspace")
-- Users may need to **restart their Slack client** (desktop app or browser) for the change to take effect
-
-### 5. Add Credentials to Environment
+### 4. Add Credentials to Environment
 
 Edit `server/.env` and add/update:
 
@@ -107,7 +97,7 @@ SLACK_OAUTH_BOT_TOKEN=xoxb-9999999999999-9999999999999-xxxxxxxxxxxxxxxxxxxxxxxx
 - **OAuth & Permissions** section:
   - Bot User OAuth Token: `SLACK_OAUTH_BOT_TOKEN`
 
-### 6. Deploy Serverless Functions
+### 5. Deploy Serverless Functions
 
 #### For Local Development (ngrok)
 
@@ -132,7 +122,7 @@ npm run deploy
 
 Note your Twilio Functions domain (e.g., `https://your-service-xxxx.twil.io`)
 
-### 7. Configure Slack Event Subscriptions
+### 6. Configure Slack Event Subscriptions
 
 1. In your Slack app, navigate to **Event Subscriptions**
 2. Toggle **"Enable Events"** to **ON**
@@ -143,17 +133,19 @@ Note your Twilio Functions domain (e.g., `https://your-service-xxxx.twil.io`)
 4. Slack will send a verification challenge - if your function is running, it will respond automatically ✅
 
 5. Under **Subscribe to bot events**, click **"Add Bot User Event"** and add:
-   - `message.im` - Messages sent in DMs with the bot
+   - `message.channels` - Messages sent in public channels with the bot
    - `file_shared` - Files shared in conversations
 
 6. Click **"Save Changes"**
+
+**Note**: If you previously had `message.im` for DM-based integration, remove it and replace with `message.channels`.
 
 **⚠️ Important**: If you see "invalid_url" or verification fails:
 - Check that your server is running
 - Verify the URL is publicly accessible
 - Check server logs for errors
 
-### 8. Verify Slack Webhook Signature (Optional Security Check)
+### 7. Verify Slack Webhook Signature (Optional Security Check)
 
 The `slack-webhook.ts` function verifies all incoming requests using HMAC-SHA256 signature verification. This prevents unauthorized requests.
 
@@ -176,30 +168,29 @@ If you want to disable verification (NOT recommended for production):
 
 The system will:
 1. Look up the Slack user by email
-2. Open a DM channel with that user
-3. Create a Twilio user with identity `slack:user@example.com`
-4. Add them as a participant
-5. Store the mapping in conversation attributes
+2. Create a Twilio user with identity `slack:user@example.com`
+3. Add them as a participant
+4. Enable Slack integration for the conversation
+5. Note: Slack channel will be auto-created when the first message is sent
 
 ### Sending Messages
 
 **From Twilio to Slack:**
-- Any message sent in the Twilio conversation is automatically forwarded to the Slack user's DM
+- When you send the first message in a Twilio conversation with Slack participants, a Slack channel is automatically created
+- The channel name matches the conversation name (e.g., "Customer Support" → `#customer-support`)
+- All subsequent messages are forwarded to this shared Slack channel
+- All Slack participants in the conversation can see messages in the same channel
 
 **From Slack to Twilio:**
-
-**How to Access the Bot:**
-1. In your Slack workspace, look for the **"Apps"** section in the left sidebar
-2. Click on **"Twilio Conversation API"** (or your bot's name)
-3. Click on the **"Messages"** tab at the top
-4. Type your message in the input field and send
-
-**Message Flow:**
-- Slack user sends a message through the bot's Messages Tab
-- Message is automatically forwarded to the Twilio conversation
+- All Slack participants share the same channel for each Twilio conversation
+- Any message sent in the Slack channel is automatically forwarded to the Twilio conversation
 - The sender appears as their Slack identity (`slack:email@example.com`)
 
-**⚠️ Important**: Users must use the Messages Tab interface (accessed through the Apps section), not regular Direct Messages. Regular DM channels may show "Sending messages to this app has been turned off".
+**Message Flow:**
+1. Add Slack participant(s) to Twilio conversation via email
+2. Send first message from Twilio → Slack channel auto-created
+3. All participants invited to the channel
+4. Messages flow bidirectionally between Twilio conversation and Slack channel
 
 ### Media/Files
 
@@ -219,12 +210,12 @@ The system will:
 4. Copy the new bot token to `.env` as `SLACK_OAUTH_BOT_TOKEN`
 5. Restart your server
 
-### Error: "Missing Slack OAuth scope: im:write"
+### Error: "Missing Slack OAuth scope: channels:manage"
 
-**Cause**: The bot token doesn't have the `im:write` scope.
+**Cause**: The bot token doesn't have the required channel scopes.
 
 **Solution**:
-1. Add `im:write` scope in **OAuth & Permissions**
+1. Add `channels:manage`, `channels:read`, `channels:history`, and `channels:join` scopes in **OAuth & Permissions**
 2. **Reinstall the app** to workspace
 3. Update bot token in `.env`
 4. Restart server
@@ -252,33 +243,14 @@ The system will:
 - Verify conversation exists and SID is correct
 - Check browser console for detailed error logs (temp logging enabled)
 
-### Error: "Sending messages to this app has been turned off"
-
-**Symptom**: When you try to send messages to the bot in Slack, you see the message "Sending messages to this app has been turned off" and the input field is disabled.
-
-**Cause**: The Messages Tab is not enabled in your Slack app's App Home configuration.
-
-**Solution**:
-1. Go to [https://api.slack.com/apps](https://api.slack.com/apps) → Your App
-2. Navigate to **App Home** in the left sidebar
-3. Scroll down to **"Show Tabs"** section
-4. Find **"Messages Tab"** and toggle it **ON** (green)
-5. ✅ Check the box: **"Allow users to send Slash commands and messages from the messages tab"**
-6. Click **"Save Changes"**
-7. **CRITICAL**: Go to **"Install App"** in sidebar → Click **"Reinstall to Workspace"**
-8. **Restart your Slack client** (desktop app) or refresh your browser
-9. Try accessing the bot again through the **Apps** section in your Slack sidebar
-10. Click on the **"Messages"** tab at the top of the bot's interface
-
-**Note**: Direct messages that were opened programmatically by the bot may remain disabled. Users should access the bot through the Apps section and use the Messages Tab interface.
-
 ### Messages Not Forwarding from Slack to Twilio
 
 **Check**:
 1. Event Subscriptions configured correctly
 2. Request URL verified successfully
-3. `message.im` event subscribed
-4. Server logs show incoming webhook requests
+3. `message.channels` event subscribed
+4. Bot has been invited to the Slack channel
+5. Server logs show incoming webhook requests
 
 **Debug**:
 ```bash
@@ -303,8 +275,25 @@ tail -f server/logs/twilio-run.log
 **Cause**: Loop prevention not working (should be implemented via `source: 'slack'` attribute).
 
 **Solution**: Check that:
-- `slack-webhook.ts` line 235 sets `source: 'slack'` in message attributes
-- `post-event.ts` line 97 checks `source !== 'slack'`
+- `slack-webhook.ts` sets `source: 'slack'` in message attributes when forwarding from Slack
+- `post-event.ts` checks `source !== 'slack'` before forwarding to Slack
+- Bot messages are ignored in `slack-webhook.ts` (checks for `bot_id`)
+
+### System Messages Appearing in Conversation
+
+**Symptom**: Seeing "has joined the channel" or other system messages in Twilio Conversations.
+
+**Cause**: Slack sends system messages (channel joins, leaves, etc.) as `message` events with specific subtypes.
+
+**Solution**: The integration automatically filters out these system message types:
+- `channel_join` / `channel_leave` - User join/leave notifications
+- `channel_archive` / `channel_unarchive` - Channel archive status changes
+- `channel_name` / `channel_purpose` / `channel_topic` - Channel metadata changes
+- `pinned_item` / `unpinned_item` - Pin status changes
+
+These messages are logged as "ignored_system_message" and won't appear in Twilio Conversations.
+
+**Note**: Users without email addresses (e.g., some bot accounts) are also automatically skipped to prevent `slack:undefined` identities.
 
 ## Configuration Reference
 
@@ -331,24 +320,38 @@ This distinguishes them from chat participants (no prefix) and SMS/WhatsApp (pho
 
 ### Conversation Attributes Structure
 
-When a Slack participant is added, the conversation attributes are updated:
+When Slack participants are added, the conversation attributes are updated:
 
 ```json
 {
+  "slackEnabled": true,
+  "slackChannel": {
+    "channelId": "C04ABC123",
+    "channelName": "customer-support",
+    "createdAt": "2025-11-16T10:30:00Z"
+  },
   "slackParticipants": {
     "U01XXXXXXXXX": {
       "participantSid": "MBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-      "channelId": "D01XXXXXXXXX",
-      "email": "user@example.com"
+      "email": "alice@example.com"
+    },
+    "U02YYYYYYYYY": {
+      "participantSid": "MBzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+      "email": "bob@example.com"
     }
   }
 }
 ```
 
-- **Key**: Slack User ID
-- **participantSid**: Twilio participant SID
-- **channelId**: Slack DM channel ID
-- **email**: User's email address
+- **slackEnabled**: Boolean flag indicating Slack integration is active
+- **slackChannel**: Object containing Slack channel information (added on first message)
+  - **channelId**: Slack channel ID
+  - **channelName**: Slack channel name (sanitized from conversation name)
+  - **createdAt**: Timestamp when channel was created
+- **slackParticipants**: Object mapping Slack User IDs to participant info
+  - **Key**: Slack User ID
+  - **participantSid**: Twilio participant SID
+  - **email**: User's email address
 
 ## API Endpoints
 
@@ -450,18 +453,18 @@ Comprehensive logging has been added to help with debugging:
 2. Remove the temp logging functions and their calls
 3. Clean up console.log statements marked with TEMP
 
-## Migration from Channel-Based Integration
+## Migration from DM-Based Integration
 
-If you previously configured Slack for channels instead of DMs:
+If you previously configured Slack for DMs instead of channels:
 
 **Remove these scopes:**
-- `channels:read`
-- `channels:history`
-- `groups:read`
-- `groups:history`
+- `im:write`
+- `im:read`
+- `im:history`
 
 **Remove these events:**
-- `message.channels`
-- `message.groups`
+- `message.im`
 
-**Add the DM scopes and events** as documented above, then **reinstall the app**.
+**Add the channel scopes and events** as documented above, then **reinstall the app**.
+
+**Note**: Existing DM-based conversations will need to be migrated manually. New conversations will automatically use the channel-based approach.

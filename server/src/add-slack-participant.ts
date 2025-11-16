@@ -38,14 +38,6 @@ export interface SlackApiResponse {
   error?: string;
 }
 
-export interface SlackIMResponse {
-  ok: boolean;
-  channel?: {
-    id: string;
-  };
-  error?: string;
-}
-
 type AddSlackParticipantFunction = ServerlessFunctionSignature<ServerlessEnvironment, AddSlackParticipantEvent>;
 
 // TEMP LOGGING - Remove after debugging Slack integration
@@ -73,8 +65,6 @@ const tempLogSlackApiCall = (
         console.log('⚠️  MISSING SLACK OAUTH SCOPE - Required scopes for this API:');
         if (apiName === 'users.lookupByEmail') {
           console.log('   - users:read.email (REQUIRED)');
-        } else if (apiName === 'conversations.open') {
-          console.log('   - im:write (REQUIRED)');
         }
         console.log('   Go to https://api.slack.com/apps → Your App → OAuth & Permissions → Scopes');
       }
@@ -204,54 +194,8 @@ export const handler: AddSlackParticipantFunction = async (
       realName: slackUser.real_name
     });
 
-    // Open DM channel with Slack user
-    console.log('Opening Slack DM channel with user:', slackUser.id);
-    const conversationsOpenUrl = 'https://slack.com/api/conversations.open';
-    const conversationsOpenBody = { users: slackUser.id };
-    tempLogSlackApiCall('conversations.open', conversationsOpenUrl, conversationsOpenBody);
-
-    const slackIMResponse = await fetch(conversationsOpenUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${slackBotToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(conversationsOpenBody)
-    });
-
-    const slackIMData = await slackIMResponse.json() as SlackIMResponse;
-    tempLogSlackApiCall(
-      'conversations.open',
-      conversationsOpenUrl,
-      conversationsOpenBody,
-      slackIMResponse.status,
-      slackIMData
-    );
-
-    if (!slackIMData.ok || !slackIMData.channel) {
-      console.error('Failed to open Slack DM:', slackIMData.error);
-
-      // Improve error message for missing scope
-      let errorMessage = 'Failed to open Slack DM channel';
-      let errorDetails = slackIMData.error || 'Unknown error';
-
-      if (slackIMData.error === 'missing_scope') {
-        errorMessage = 'Missing Slack OAuth scope: im:write';
-        errorDetails = 'Please add the im:write scope to your Slack app and reinstall it';
-      }
-
-      response.setStatusCode(500);
-      response.setBody(JSON.stringify({
-        success: false,
-        error: errorMessage,
-        details: errorDetails,
-        code: slackIMData.error || 'slack_error'
-      }));
-      return callback(null, response);
-    }
-
-    const slackChannelId = slackIMData.channel.id;
-    console.log('Slack DM channel opened:', slackChannelId);
+    // Note: Slack channel will be created automatically when first message is sent
+    console.log('Slack user will be added to conversation. Channel will be auto-created on first message.');
 
     // Initialize Twilio client
     const client = context.getTwilioClient();
@@ -286,7 +230,6 @@ export const handler: AddSlackParticipantFunction = async (
               slackUserId: slackUser.id,
               slackTeamId: slackUser.team_id,
               slackEmail: slackEmail,
-              slackChannelId: slackChannelId,
               createdBy: 'conversations-demo',
               createdAt: new Date().toISOString()
             })
@@ -316,7 +259,6 @@ export const handler: AddSlackParticipantFunction = async (
           attributes: JSON.stringify({
             friendlyName: friendlyName,
             slackUserId: slackUser.id,
-            slackChannelId: slackChannelId,
             slackEmail: slackEmail,
             type: 'slack-user'
           })
@@ -329,12 +271,16 @@ export const handler: AddSlackParticipantFunction = async (
         .fetch();
 
       const conversationAttrs = conversation.attributes ? JSON.parse(conversation.attributes) : {};
+
+      // Enable Slack integration for this conversation
+      conversationAttrs.slackEnabled = true;
+
+      // Track Slack participants (channel info will be added by post-event.ts on first message)
       if (!conversationAttrs.slackParticipants) {
         conversationAttrs.slackParticipants = {};
       }
       conversationAttrs.slackParticipants[slackUser.id] = {
         participantSid: participant.sid,
-        channelId: slackChannelId,
         email: slackEmail
       };
 
@@ -349,7 +295,7 @@ export const handler: AddSlackParticipantFunction = async (
         participantSid: participant.sid,
         identity: participant.identity,
         slackUserId: slackUser.id,
-        slackChannelId: slackChannelId
+        note: 'Slack channel will be auto-created on first message'
       });
 
       // Return success response
@@ -371,8 +317,7 @@ export const handler: AddSlackParticipantFunction = async (
         slackUser: {
           id: slackUser.id,
           name: slackUser.name,
-          email: slackEmail,
-          channelId: slackChannelId
+          email: slackEmail
         }
       }));
 
