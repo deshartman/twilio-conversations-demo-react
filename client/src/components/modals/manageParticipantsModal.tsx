@@ -44,6 +44,7 @@ const ManageParticipantsModal: React.FC<ManageParticipantsModalProps> = (
   const whatsAppParticipant = getTranslation(local, "whatsAppParticipant");
   const chatParticipant = getTranslation(local, "chatParticipant");
   const aiAgentParticipant = getTranslation(local, "aiAgentParticipant");
+  const slackParticipant = "Slack Participant";
   const remove = getTranslation(local, "remove");
 
   return (
@@ -105,6 +106,14 @@ const ManageParticipantsModal: React.FC<ManageParticipantsModalProps> = (
                   }}
                 >
                   {aiAgentParticipant}
+                </MenuItem>
+                <MenuItem
+                  {...menu}
+                  onClick={() => {
+                    props.onClick(Content.AddSlack);
+                  }}
+                >
+                  {slackParticipant}
                 </MenuItem>
               </Menu>
             </Box>

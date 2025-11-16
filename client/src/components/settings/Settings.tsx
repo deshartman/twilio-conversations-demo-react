@@ -10,12 +10,14 @@ import { Content } from "../../types";
 import {
   addNonChatParticipant,
   addUserAsParticipant,
+  addSlackParticipant,
   removeParticipant,
 } from "../../api";
 import AddChatParticipantModal from "../modals/addChatMemberModal";
 import AddSMSParticipantModal from "../modals/addSMSParticipantModal";
 import AddWhatsAppParticipantModal from "../modals/addWhatsAppParticipant";
 import AddAIAgentModal from "../modals/addAIAgentModal";
+import AddSlackParticipantModal from "../modals/addSlackParticipantModal";
 import { actionCreators } from "../../store";
 import ActionErrorModal from "../modals/ActionErrorModal";
 import {
@@ -80,6 +82,10 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
   const [isAddAIAgentOpen, setIsAddAIAgentOpen] = useState(false);
   const handleAIAgentOpen = () => setIsAddAIAgentOpen(true);
   const handleAIAgentClose = () => setIsAddAIAgentOpen(false);
+
+  const [isAddSlackOpen, setIsAddSlackOpen] = useState(false);
+  const handleSlackOpen = () => setIsAddSlackOpen(true);
+  const handleSlackClose = () => setIsAddSlackOpen(false);
 
   const local = useSelector((state: AppState) => state.local);
   const proxyNumbers = useSelector((state: AppState) => state.proxyNumber);
@@ -176,6 +182,9 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
                 return null;
               case Content.AddAIAgent:
                 handleAIAgentOpen();
+                return null;
+              case Content.AddSlack:
+                handleSlackOpen();
                 return null;
               default:
                 return null;
@@ -359,6 +368,51 @@ const Settings: React.FC<SettingsProps> = (props: SettingsProps) => {
               );
               emptyData();
               handleAIAgentClose();
+            } catch (e) {
+              setErrorData(e.body);
+              setErrorToShow(ERROR_MODAL_MESSAGES.ADD_PARTICIPANT);
+            }
+          }}
+        />
+      )}
+      {isAddSlackOpen && (
+        <AddSlackParticipantModal
+          email={name}
+          friendlyName={friendlyName}
+          isModalOpen={isAddSlackOpen}
+          title={manageParticipants}
+          setEmail={(email: string) => {
+            setName(email);
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (email && !emailRegex.test(email)) {
+              setError("Invalid email format");
+            } else {
+              setError("");
+            }
+          }}
+          setFriendlyName={setFriendlyName}
+          error={error}
+          emailInputRef={nameInputRef}
+          handleClose={() => {
+            emptyData();
+            handleSlackClose();
+          }}
+          onBack={() => {
+            emptyData();
+            handleSlackClose();
+            props.setIsManageParticipantOpen(true);
+          }}
+          action={async () => {
+            try {
+              await addSlackParticipant(
+                name.trim(),
+                props.convo.sid,
+                addNotifications,
+                friendlyName.trim() || undefined
+              );
+              emptyData();
+              handleSlackClose();
             } catch (e) {
               setErrorData(e.body);
               setErrorToShow(ERROR_MODAL_MESSAGES.ADD_PARTICIPANT);

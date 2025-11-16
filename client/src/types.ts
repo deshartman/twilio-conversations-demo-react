@@ -29,6 +29,7 @@ export enum Content {
   AddSMS = "Add SMS participant",
   AddWhatsApp = "Add WhatsApp participant",
   AddAIAgent = "Add AI Agent participant",
+  AddSlack = "Add Slack participant",
 }
 
 export type MenuElement = {

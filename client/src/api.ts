@@ -391,3 +391,115 @@ export async function addUserAsParticipant(
     }
   }
 }
+
+// TEMP LOGGING - Remove after debugging Slack integration
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const tempLogSlackApiCall = (stage: string, data?: any, error?: any) => {
+  console.log(`=== CLIENT: addSlackParticipant - ${stage} ===`);
+  if (data) {
+    console.log("Data:", JSON.stringify(data, null, 2));
+  }
+  if (error) {
+    console.log("Error:", JSON.stringify(error, null, 2));
+  }
+  console.log("==========================================\n");
+};
+
+export async function addSlackParticipant(
+  slackEmail: string,
+  conversationSid: string,
+  addNotifications?: (notifications: NotificationsType) => void,
+  friendlyName?: string
+): Promise<{
+  success: boolean;
+  participant: {
+    sid: string;
+    identity: string;
+    attributes: unknown;
+    dateCreated: Date;
+    dateUpdated: Date;
+  };
+  user: {
+    sid: string;
+    identity: string;
+    friendlyName: string;
+  };
+  slackUser: {
+    id: string;
+    name: string;
+    email: string;
+    channelId: string;
+  };
+}> {
+  if (slackEmail.length === 0) {
+    throw new Error("Slack email is empty");
+  }
+
+  if (conversationSid.length === 0) {
+    throw new Error("Conversation SID is empty");
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(slackEmail)) {
+    throw new Error("Invalid email format");
+  }
+
+  try {
+    const requestData: {
+      slackEmail: string;
+      conversationSid: string;
+      friendlyName?: string;
+    } = {
+      slackEmail: slackEmail.trim(),
+      conversationSid: conversationSid,
+    };
+
+    if (friendlyName && friendlyName.trim()) {
+      requestData.friendlyName = friendlyName.trim();
+    }
+
+    tempLogSlackApiCall("REQUEST", requestData);
+
+    const response = await axios.post("/add-slack-participant", requestData);
+
+    tempLogSlackApiCall("RESPONSE", response.data);
+
+    if (response.data.success) {
+      successNotification({
+        message: PARTICIPANT_MESSAGES.ADDED,
+        addNotifications,
+      });
+      return response.data;
+    } else {
+      throw new Error(response.data.error || "Failed to add Slack participant");
+    }
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const serverError = error.response?.data;
+      tempLogSlackApiCall("ERROR", {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        serverError: serverError,
+        axiosError: error.message,
+      });
+
+      const errorMessage = serverError?.error || error.message;
+      unexpectedErrorNotification(errorMessage, addNotifications);
+
+      // Create error with body property for Settings component
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const errorWithBody: any = new Error(errorMessage);
+      errorWithBody.body = {
+        message: serverError?.details || errorMessage,
+        code: serverError?.code || error.response?.status || "unknown_error",
+      };
+
+      throw errorWithBody;
+    } else {
+      tempLogSlackApiCall("EXCEPTION", { error: error.message });
+      unexpectedErrorNotification(error.message, addNotifications);
+      throw error;
+    }
+  }
+}
