@@ -197,6 +197,55 @@ The system will:
 - Files sent from Twilio → Slack appear as file notifications with download info
 - Files sent from Slack → Twilio are downloaded and uploaded to Twilio Media Content Service (MCS)
 
+## Understanding Slack Duplicate Events
+
+### Why Slack Sends Duplicate Webhooks
+
+Slack's Events API may deliver the same event multiple times. This is documented behavior and occurs because:
+
+1. **Infrastructure Reliability**: Slack's distributed infrastructure sends events from multiple servers for redundancy
+2. **Retry Logic**: If your endpoint is slow to respond (>3 seconds), Slack may retry the webhook
+3. **Network Issues**: Temporary network problems can cause Slack to re-send events
+
+**This is normal and expected behavior** - not a configuration issue. The official Slack documentation states: "Your app should be prepared to receive the same event more than once."
+
+### How This Integration Handles Duplicates
+
+The integration uses **message-based deduplication** to prevent duplicate messages from appearing in Twilio Conversations:
+
+1. Before adding a message, the webhook checks the last 20 messages in the conversation
+2. If a message with the same author and body was added in the last 30 seconds, it skips adding the duplicate
+3. Both webhook calls are processed, but only the first one actually creates a message
+
+**Why not event-based deduplication?**
+
+Event-based deduplication (using Slack's `event_id` field) would be ideal, but it requires external storage (Redis, Twilio Sync, etc.) because:
+- Twilio Functions are stateless serverless functions
+- Each concurrent webhook request runs in a separate isolated instance
+- In-memory caches don't persist between parallel function invocations
+
+For most use cases, message-based deduplication is simpler and works reliably without external dependencies.
+
+### What You'll See in Logs
+
+When duplicates arrive, you'll see:
+
+```
+=== SLACK EVENT RECEIVED ===
+Event Type: message
+...
+Checking for duplicate messages...
+Message added to conversation: CHxxxx
+
+=== SLACK EVENT RECEIVED ===  # Second webhook with same message
+Event Type: message
+...
+Checking for duplicate messages...
+⚠️  Duplicate message detected, skipping add
+```
+
+Both webhooks return 200 status (success), but only the first one creates a message in Twilio Conversations.
+
 ## Troubleshooting
 
 ### Error: "Missing Slack OAuth scope: users:read.email"
@@ -259,6 +308,14 @@ tail -f server/logs/twilio-run.log
 
 # Or check browser console for webhook logs
 ```
+
+### Duplicate Messages Appearing in Twilio
+
+**Symptom**: Same Slack message appears twice in Twilio Conversations.
+
+**Cause**: Slack's Events API intentionally sends duplicate webhooks for reliability (see "Understanding Slack Duplicate Events" section above).
+
+**Solution**: ✅ **Already handled automatically**. The integration detects and prevents duplicate messages from being added to conversations. You may see duplicate webhook calls in the logs, but only one message will appear in the conversation.
 
 ### Messages Not Forwarding from Twilio to Slack
 

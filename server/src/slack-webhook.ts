@@ -32,8 +32,6 @@ export interface SlackWebhookEvent {
   challenge?: string;
   token?: string;
   team_id?: string;
-  event_id?: string;
-  event_time?: number;
   event?: SlackEvent;
   request: {
     cookies: {};
@@ -45,51 +43,6 @@ export interface SlackWebhookEvent {
 }
 
 type SlackWebhookFunction = ServerlessFunctionSignature<ServerlessEnvironment, SlackWebhookEvent>;
-
-// Event deduplication cache (in-memory)
-// Maps event_id -> timestamp of when it was processed
-const processedEvents = new Map<string, number>();
-
-// Clean up events older than 1 hour
-function cleanupOldEvents() {
-  const oneHourAgo = Date.now() - (60 * 60 * 1000);
-  for (const [eventId, timestamp] of processedEvents.entries()) {
-    if (timestamp < oneHourAgo) {
-      processedEvents.delete(eventId);
-    }
-  }
-}
-
-// Check if event was already processed
-function isEventProcessed(eventId: string | undefined, eventTime: number | undefined): boolean {
-  console.log('→ isEventProcessed called with eventId:', eventId);
-  console.log('→ Current cache size:', processedEvents.size);
-  console.log('→ Cache contents:', Array.from(processedEvents.keys()));
-
-  if (!eventId) {
-    // No event_id means we can't dedupe, so process it
-    console.log('→ No event_id, returning false');
-    return false;
-  }
-
-  // Clean up old events periodically (10% chance on each call)
-  if (Math.random() < 0.1) {
-    cleanupOldEvents();
-  }
-
-  const hasEvent = processedEvents.has(eventId);
-  console.log('→ Cache has this event?', hasEvent);
-
-  if (hasEvent) {
-    console.log(`⚠️  Duplicate event detected: ${eventId} (already processed)`);
-    return true;
-  }
-
-  // Mark as processed
-  processedEvents.set(eventId, Date.now());
-  console.log('→ Added to cache. New cache size:', processedEvents.size);
-  return false;
-}
 
 // TEMP LOGGING - Remove after debugging Slack signature
 const tempLogSignatureVerification = (
@@ -338,21 +291,6 @@ export const handler: SlackWebhookFunction = async (
 
     // Handle event callback
     if (event.type === 'event_callback' && event.event) {
-      // TEMP LOGGING - Check event_id for deduplication
-      console.log('=== EVENT DEDUPLICATION CHECK ===');
-      console.log('Event ID:', event.event_id);
-      console.log('Event Time:', event.event_time);
-      console.log('Event Type:', event.type);
-      console.log('=================================');
-
-      // Check for duplicate events
-      if (isEventProcessed(event.event_id, event.event_time)) {
-        console.log('⚠️  Duplicate event ignored, returning 200');
-        response.setStatusCode(200);
-        response.setBody(JSON.stringify({ status: 'duplicate_event_ignored' }));
-        return callback(null, response);
-      }
-
       const slackEvent = event.event;
 
       // TEMP LOGGING - Remove after debugging
