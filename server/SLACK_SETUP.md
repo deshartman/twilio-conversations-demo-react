@@ -84,7 +84,7 @@ SLACK_APP_ID=A01XXXXXXXXX
 SLACK_CLIENT_ID=9999999999999.9999999999999
 SLACK_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 SLACK_SIGNING_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-SLACK_OAUTH_BOT_TOKEN=xoxb-9999999999999-9999999999999-xxxxxxxxxxxxxxxxxxxxxxxx
+SLACK_OAUTH_BOT_TOKEN=xoxb
 ```
 
 **Where to find these values:**
