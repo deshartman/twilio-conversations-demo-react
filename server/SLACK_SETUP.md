@@ -76,16 +76,7 @@ Click **"Add an OAuth Scope"** under **Bot Token Scopes** and add:
 
 ### 4. Add Credentials to Environment
 
-Edit `server/.env` and add/update:
-
-```env
-# Slack Configuration
-SLACK_APP_ID=A01XXXXXXXXX
-SLACK_CLIENT_ID=9999999999999.9999999999999
-SLACK_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-SLACK_SIGNING_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-SLACK_OAUTH_BOT_TOKEN=xoxb
-```
+Edit `server/.env` and add/update
 
 **Where to find these values:**
 - Go to [https://api.slack.com/apps](https://api.slack.com/apps) → Your App
