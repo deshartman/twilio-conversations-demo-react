@@ -5,6 +5,108 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2025-12-05
+
+### pnpm Support & Missing Dependencies
+
+This release adds full pnpm package manager support and fixes missing Twilio Paste component dependencies.
+
+### Added
+
+#### pnpm Package Manager Support
+- **pnpm-workspace.yaml** - Created workspace configuration for pnpm monorepo support
+- **Package manager documentation** - Updated README with comprehensive pnpm installation and usage instructions
+- **Troubleshooting guide** - Added detailed section for package manager issues and common errors
+- **Alternative installation methods** - Documented both pnpm (recommended) and npm (alternative) workflows
+
+#### Missing Twilio Paste Dependencies
+Added 8 missing @twilio-paste packages that were imported but not declared in dependencies:
+- `@twilio-paste/button` (^14.0.0) - Button components used throughout the UI
+- `@twilio-paste/help-text` (^13.0.0) - Help text components for forms
+- `@twilio-paste/input` (^9.0.0) - Input field components
+- `@twilio-paste/label` (^13.0.0) - Label components for form fields
+- `@twilio-paste/media-object` (^10.0.0) - Media object layout components
+- `@twilio-paste/menu` (^14.0.0) - Menu and dropdown components
+- `@twilio-paste/modal` (^16.0.0) - Modal dialog components
+- `@twilio-paste/toast` (^12.0.0) - Toast notification components
+
+### Fixed
+
+#### Build Failures
+- **Module not found errors** - Resolved "Can't resolve '@twilio-paste/button'" and similar errors
+- **Workspace dependency resolution** - Fixed pnpm workspace recognition issues
+- **Peer dependency conflicts** - Ensured all Twilio Paste packages use compatible versions
+
+#### Documentation
+- **Prerequisites section** - Added explicit package manager requirements
+- **Quick Start Checklist** - Added package manager setup item
+- **Installation instructions** - Rewritten with pnpm as primary option
+- **Troubleshooting section** - Comprehensive package manager issue resolution guide
+
+### Changed
+
+#### README.md Enhancements
+- **pnpm-first approach** - Installation instructions now prioritize pnpm with npm as alternative
+- **Workspace configuration explanation** - Documents the role of pnpm-workspace.yaml file
+- **Expected warnings documented** - Explains that pnpm workspace warning is normal and expected
+- **Command equivalence noted** - Clarifies that `pnpm run` works wherever `npm run` is used
+
+#### Package Manager Workflow
+- **Consistent commands** - All npm commands work with pnpm (e.g., `pnpm run dev`)
+- **Lock file guidance** - Clear instructions on managing multiple lock files
+- **Fresh install procedures** - Documented cleanup steps when switching package managers
+
+### Technical Details
+
+#### Dependency Versions
+All added Twilio Paste packages use versions compatible with existing packages:
+- Version ranges chosen to match peer dependencies (avoiding v15+ button with other v14 components)
+- No peer dependency warnings after installation
+- Full compatibility with @twilio-paste/core ^20.12.0
+
+#### Workspace Configuration
+```yaml
+# pnpm-workspace.yaml
+packages:
+  - 'client'
+  - 'server'
+```
+
+### Migration Guide
+
+#### Using pnpm (Recommended)
+```bash
+# Clean existing installations
+rm -rf node_modules client/node_modules server/node_modules
+
+# Remove npm lock files (keep pnpm-lock.yaml)
+rm package-lock.json client/package-lock.json server/package-lock.json
+rm server/yarn.lock
+
+# Install with pnpm (workspace config now included)
+pnpm install
+
+# Run development server
+pnpm run dev
+```
+
+#### Using npm (Alternative)
+```bash
+# Requires npm 7+ for workspace support
+npm install
+npm run dev
+```
+
+### Compatibility
+- **Node.js 20+** - Required (matches server engine requirement)
+- **Node.js 22** - Tested and working (shows engine warning but functions correctly)
+- **pnpm 10.x** - Fully supported
+- **npm 7+** - Workspace support required
+
+---
+
+*pnpm monorepo support added with all missing dependencies resolved.*
+
 ## [2.1.0] - 2025-01-07
 
 ### Enhanced Build System & TypeScript Fixes

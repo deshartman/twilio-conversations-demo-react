@@ -1,6 +1,6 @@
 # Twilio Conversations Demo - Full Stack Application
 
-![SDK Version](https://img.shields.io/badge/SDK%20version-2.1.0-blue.svg) ![Monorepo](https://img.shields.io/badge/Architecture-Monorepo-green.svg)
+![SDK Version](https://img.shields.io/badge/SDK%20version-2.1.1-blue.svg) ![Monorepo](https://img.shields.io/badge/Architecture-Monorepo-green.svg)
 
 ## Overview
 
@@ -28,6 +28,9 @@ The application allows users to create and join conversations, add participants 
 ### Prerequisites
 
 - Node.js 20+
+- **Package Manager**: pnpm (recommended) or npm 7+ for workspace support
+  - For pnpm: Install with `npm install -g pnpm` or see [pnpm installation](https://pnpm.io/installation)
+  - For npm: Ensure you have npm 7 or higher (comes with Node.js 16+)
 - [Twilio CLI](https://www.twilio.com/docs/twilio-cli/quickstart) installed and configured
 - Twilio Account with Conversations Service
 - [ngrok](https://ngrok.com) (for local development with webhooks) - Required to expose local server for Twilio webhooks during development
@@ -38,6 +41,7 @@ The application allows users to create and join conversations, add participants 
 Getting started with this application requires a few Twilio resources. Here's the complete checklist:
 
 - [ ] **Node.js 20+** installed
+- [ ] **Package Manager** - pnpm (recommended) or npm 7+
 - [ ] **Twilio Account** created
 - [ ] **Conversation Service** created in Twilio Console
 - [ ] **SMS-capable phone number** purchased (for SMS participants)
@@ -50,11 +54,28 @@ Getting started with this application requires a few Twilio resources. Here's th
 ### Environment Setup
 
 1. **Clone and install dependencies:**
+
+   **Using pnpm (recommended):**
+   ```bash
+   git clone <your-repo-url>
+   cd twilio-conversations-demo-react
+   pnpm install
+   ```
+
+   Note: This project includes a `pnpm-workspace.yaml` file to configure pnpm workspaces. The monorepo structure with `client/` and `server/` workspaces will be automatically recognized.
+
+   **Using npm (alternative - requires npm 7+):**
    ```bash
    git clone <your-repo-url>
    cd twilio-conversations-demo-react
    npm install
    ```
+
+   **Important:**
+   - Use **only one** package manager throughout the project
+   - Don't mix `npm` and `pnpm` commands
+   - If switching package managers, delete old lock files first
+   - All `npm run` commands work with `pnpm run` as well (e.g., `pnpm run dev` instead of `npm run dev`)
 
 2. **Set up Twilio Conversation Service and Webhooks:**
 
@@ -335,6 +356,27 @@ To enable push notifications, set up Firebase:
 ### Common Issues
 
 **Build Failures**: Ensure Node.js 20+ and all dependencies installed
+
+**Package Manager Issues**:
+- **Error: "command not found"** (e.g., `react-scripts`, `twilio-run`)
+  - Workspace dependencies weren't installed properly
+  - For pnpm: Ensure `pnpm-workspace.yaml` exists at root, then run `pnpm install`
+  - For npm: Requires npm 7+ for workspace support, run `npm install` at root
+  - Verify: Check that `node_modules` exists in `client/` and `server/` directories
+  - If still failing: Delete node_modules in all locations (`rm -rf node_modules client/node_modules server/node_modules`) and reinstall
+
+- **pnpm workspace warning**
+  - Warning: "The 'workspaces' field in package.json is not supported by pnpm"
+  - This is expected and normal - pnpm uses `pnpm-workspace.yaml` instead
+  - The warning is informational only and won't break functionality
+  - Installation will work correctly if `pnpm-workspace.yaml` exists
+
+- **Mixed lock files**
+  - Project contains multiple lock files (`package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`)
+  - Solution: Choose one package manager and delete others' lock files
+  - For pnpm: Keep `pnpm-lock.yaml`, delete `package-lock.json` files and `yarn.lock`
+  - For npm: Keep `package-lock.json` files, delete `pnpm-lock.yaml` and `yarn.lock`
+  - After cleanup: Run fresh install with your chosen package manager
 
 **Authentication Errors**: Verify Twilio credentials in `server/.env`
 
