@@ -2,7 +2,7 @@
 
 ![SDK Version](https://img.shields.io/badge/SDK%20version-2.1.1-blue.svg) ![Monorepo](https://img.shields.io/badge/Architecture-Monorepo-green.svg)
 
-## Overview
+## Overview 
 
 This is a complete full-stack Twilio Conversations demo application built as a monorepo. It demonstrates how to build a modern chat application with:
 
